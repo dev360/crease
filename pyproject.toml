@@ -60,7 +60,7 @@ pandas = ">=2.0"
 [tool.poetry.group.dev.dependencies]
 python-semantic-release = "^9.8"
 pre-commit = "^3.7"
-ruff = "^0.6"
+ruff = ">=0.6,<0.16"
 
 [tool.poetry.scripts]
 crease = "crease.cli:main"
