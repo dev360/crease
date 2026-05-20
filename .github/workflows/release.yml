@@ -52,16 +52,35 @@ jobs:
         run: poetry install --with dev
 
       - name: Release (tag + changelog + GitHub Release)
+        id: release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # Capture the version before and after semantic-release runs. If the
+        # commit log since the last tag has no `feat:`/`fix:`/`perf:`/`refactor:`,
+        # semantic-release no-ops and the version stays the same — in which
+        # case build + publish below must be skipped, otherwise poetry
+        # rebuilds the existing version and PyPI 400s on "file already exists".
         run: |
+          OLD_VERSION=$(poetry version --short)
           poetry run semantic-release version
           poetry run semantic-release publish
+          NEW_VERSION=$(poetry version --short)
+          echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
+          echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
+          if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
+            echo "released=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::No version bump warranted — skipping build + publish."
+          else
+            echo "released=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::Released $NEW_VERSION (was $OLD_VERSION)."
+          fi
 
       - name: Build distribution
+        if: steps.release.outputs.released == 'true'
         run: poetry build
 
       - name: Publish to PyPI
+        if: steps.release.outputs.released == 'true'
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
         run: poetry publish
