@@ -1,24 +1,16 @@
 # crease
 
+<!-- Edits to this file must be SHORT. Add tight rules, not essays. -->
+
 Declarative Excel-to-JSON extraction and validation. A YAML template describes where the data lives and what the fields mean; the same template drives both extraction (cells → canonical JSON) and validation (constraints → structured errors).
 
-## ⚠ No real PII in generated artifacts — ever
+## No real PII in generated artifacts
 
-**Any** artifact you generate on behalf of this project — test fixtures, code examples, docstring examples, PR descriptions, commit messages, README snippets, doc-site copy, chat responses that include sample data, anything — must use **fictitious** values. No real names, real emails, real phone numbers, real addresses, real company names, real customer identifiers, real account numbers, real domains belonging to actual organisations, real geolocations tied to actual people, or any other data that could identify a real human or organisation.
+Every artifact in this repo — tests, code, docs, PR/commit messages, examples — uses **fictitious** values only. No real names, emails, phone numbers, addresses, companies, IDs, or domains. Mirror `test_cases/` (Faker with a fixed seed): use `example.com`, `Acme/Globex/Hooli`, `555-xxxx`, `ORD-1001`. If real data shows up during debug, scrub before committing.
 
-The test corpus under `test_cases/` is the model: it uses [Faker](https://faker.readthedocs.io/) with a fixed seed so every sample value is plausible-looking but generated, not borrowed from reality. Mirror that philosophy everywhere:
+## No duplicity in edits
 
-- **Emails** — use `example.com`, `example.org`, `example.net`, `acme.test`, or a Faker-generated `*@example.*` address. Never paste an email from a real inbox, support ticket, or customer file.
-- **Names** — use Faker-style (`John Smith`, `Jane Doe`, `Maria Garcia`) or obvious placeholders (`Operator A`, `Customer 1`). Never a real coworker, customer, or recognisable public figure.
-- **Companies** — use `Acme Corp`, `Globex`, `Initech`, `Hooli`, `Foo Industries`. Never a real customer's company name, even if their template inspired the example.
-- **Phone numbers** — use `555-xxxx` US-style or Faker-generated. Never paste a real number.
-- **Addresses, IDs, account numbers** — Faker-generated or obviously placeholder (`ORD-1001`, `123 Main St`). Never a real address or production identifier.
-- **Domains / URLs** — `example.com`, `localhost`, RFC-2606 reserved names, or invented ones. Never a domain that resolves to a real customer or partner.
-- **Stack traces, log snippets, real-file content** — scrub before quoting. If a user shares real data in conversation to debug something, do not echo it back in any committed artifact (test, doc, PR body, fixture).
-
-If a real-looking value sneaks in (because it came from the user's clipboard, a debug session, a Slack paste), **strip and replace before committing**. When in doubt, generate a fresh fake — Faker, made-up tokens, or RFC-reserved placeholders are always safe choices.
-
-This rule is non-negotiable. Crease will be evaluated against real customer Excel files; the *library* is fine with that, but the *repository* must remain PII-clean so it can be open-sourced, screenshared, screencast, demoed, and audited without exposure.
+When you edit, never restate something already covered elsewhere in the repo. One rule, one home. If you need to reference it, link; don't duplicate.
 
 ## First principles
 
