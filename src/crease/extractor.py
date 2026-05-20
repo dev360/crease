@@ -184,9 +184,7 @@ class ExtractResult:
         """
         spec = self._entity_spec(entity)
         if spec is not None and spec.cardinality == "one":
-            raise ValueError(
-                f"Entity '{entity}' has cardinality='one'; use get() instead of iter()."
-            )
+            raise ValueError(f"Entity '{entity}' has cardinality='one'; use get() instead of iter().")
         if not allow_partial:
             self.report.raise_if_invalid()
 
@@ -265,9 +263,7 @@ class ExtractResult:
         try:
             import pandas as pd  # local import — pandas is an optional extra
         except ImportError as e:
-            raise ImportError(
-                "to_pandas() requires the 'pandas' extra: pip install crease[pandas]"
-            ) from e
+            raise ImportError("to_pandas() requires the 'pandas' extra: pip install crease[pandas]") from e
 
         if not allow_partial:
             self.report.raise_if_invalid()

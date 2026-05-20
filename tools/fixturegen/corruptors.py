@@ -5,11 +5,12 @@ which cells/rows are valid targets per layout.
 
 Each corruptor is pure: same inputs → same outputs.
 """
+
+import random
 from dataclasses import dataclass, field
 from typing import Any
-import random
 
-from sheet import Sheet, copy, n_cols, n_rows
+from sheet import Sheet, copy, n_cols
 
 
 @dataclass
@@ -20,52 +21,64 @@ class CorruptionResult:
 
 # ---------- cell-level ----------
 
+
 def drop_cell(sheet: Sheet, r: int, c: int) -> CorruptionResult:
     out = copy(sheet)
     out[r][c] = None
-    return CorruptionResult(out, {
-        "verdict": "needs_review",
-        "bad_cells": [[r, c]],
-        "reason": "missing_value",
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "needs_review",
+            "bad_cells": [[r, c]],
+            "reason": "missing_value",
+        },
+    )
 
 
-def wrong_dtype(sheet: Sheet, r: int, c: int,
-                value: Any = "N/A") -> CorruptionResult:
+def wrong_dtype(sheet: Sheet, r: int, c: int, value: Any = "N/A") -> CorruptionResult:
     out = copy(sheet)
     out[r][c] = value
-    return CorruptionResult(out, {
-        "verdict": "needs_review",
-        "bad_cells": [[r, c]],
-        "reason": "wrong_dtype",
-        "details": {"value": value},
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "needs_review",
+            "bad_cells": [[r, c]],
+            "reason": "wrong_dtype",
+            "details": {"value": value},
+        },
+    )
 
 
-def rename_label(sheet: Sheet, r: int, c: int,
-                 new_value: str = "UNKNOWN_LABEL") -> CorruptionResult:
+def rename_label(sheet: Sheet, r: int, c: int, new_value: str = "UNKNOWN_LABEL") -> CorruptionResult:
     """Overwrite a label/header cell with an unexpected value."""
     out = copy(sheet)
     original = out[r][c]
     out[r][c] = new_value
-    return CorruptionResult(out, {
-        "verdict": "reject",
-        "bad_cells": [[r, c]],
-        "reason": "header_renamed",
-        "details": {"from": original, "to": new_value},
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "reject",
+            "bad_cells": [[r, c]],
+            "reason": "header_renamed",
+            "details": {"from": original, "to": new_value},
+        },
+    )
 
 
 # ---------- row-level ----------
 
+
 def blank_row(sheet: Sheet, r: int) -> CorruptionResult:
     out = copy(sheet)
     out[r] = [None] * n_cols(out)
-    return CorruptionResult(out, {
-        "verdict": "needs_review",
-        "bad_rows": [r],
-        "reason": "empty_row",
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "needs_review",
+            "bad_rows": [r],
+            "reason": "empty_row",
+        },
+    )
 
 
 def shift_row_left(sheet: Sheet, r: int, n: int = 1) -> CorruptionResult:
@@ -74,12 +87,15 @@ def shift_row_left(sheet: Sheet, r: int, n: int = 1) -> CorruptionResult:
     vals = (out[r] + [None] * width)[:width]  # pad to full width
     shifted = vals[n:] + [None] * n
     out[r] = shifted
-    return CorruptionResult(out, {
-        "verdict": "needs_review",
-        "bad_rows": [r],
-        "reason": "shifted_left",
-        "details": {"n": n},
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "needs_review",
+            "bad_rows": [r],
+            "reason": "shifted_left",
+            "details": {"n": n},
+        },
+    )
 
 
 def shift_block_down(sheet: Sheet, start_r: int, n: int = 1) -> CorruptionResult:
@@ -87,33 +103,43 @@ def shift_block_down(sheet: Sheet, start_r: int, n: int = 1) -> CorruptionResult
     width = n_cols(out)
     blanks = [[None] * width for _ in range(n)]
     out = out[:start_r] + blanks + out[start_r:]
-    return CorruptionResult(out, {
-        "verdict": "needs_review",
-        "bad_rows": list(range(start_r, start_r + n)),
-        "reason": "block_shifted_down",
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "needs_review",
+            "bad_rows": list(range(start_r, start_r + n)),
+            "reason": "block_shifted_down",
+        },
+    )
 
 
 def duplicate_row(sheet: Sheet, r: int) -> CorruptionResult:
     out = copy(sheet)
-    out = out[:r + 1] + [list(out[r])] + out[r + 1:]
-    return CorruptionResult(out, {
-        "verdict": "needs_review",
-        "bad_rows": [r + 1],
-        "reason": "duplicate_row",
-    })
+    out = out[: r + 1] + [list(out[r])] + out[r + 1 :]
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "needs_review",
+            "bad_rows": [r + 1],
+            "reason": "duplicate_row",
+        },
+    )
 
 
 # ---------- column-level ----------
 
+
 def drop_column(sheet: Sheet, c: int) -> CorruptionResult:
-    out = [row[:c] + row[c + 1:] for row in sheet]
-    return CorruptionResult(out, {
-        "verdict": "reject",
-        "bad_cells": [],
-        "reason": "missing_column",
-        "details": {"col_index": c},
-    })
+    out = [row[:c] + row[c + 1 :] for row in sheet]
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "reject",
+            "bad_cells": [],
+            "reason": "missing_column",
+            "details": {"col_index": c},
+        },
+    )
 
 
 def swap_columns(sheet: Sheet, c_a: int, c_b: int) -> CorruptionResult:
@@ -121,15 +147,19 @@ def swap_columns(sheet: Sheet, c_a: int, c_b: int) -> CorruptionResult:
     for row in out:
         if c_a < len(row) and c_b < len(row):
             row[c_a], row[c_b] = row[c_b], row[c_a]
-    return CorruptionResult(out, {
-        "verdict": "reject",
-        "bad_cells": [],
-        "reason": "columns_swapped",
-        "details": {"a": c_a, "b": c_b},
-    })
+    return CorruptionResult(
+        out,
+        {
+            "verdict": "reject",
+            "bad_cells": [],
+            "reason": "columns_swapped",
+            "details": {"a": c_a, "b": c_b},
+        },
+    )
 
 
 # ---------- dispatch ----------
+
 
 def apply(kind: str, sheet: Sheet, layout, rng: random.Random) -> CorruptionResult:
     """Apply a named corruption, picking valid coords for the given layout."""

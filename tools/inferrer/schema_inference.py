@@ -10,18 +10,16 @@ Approach:
      Claude's response to a known shape
   5. Convert the response into a standard JSON Schema and return both
 """
+
 from __future__ import annotations
 
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
-import json
-
-import openpyxl
-from pydantic import BaseModel, Field
 
 import anthropic
-
+import openpyxl
+from pydantic import BaseModel, Field
 
 SAMPLE_ROWS = 25  # rows per tab to send to the model
 MODEL = "claude-opus-4-7"
@@ -31,9 +29,20 @@ MODEL = "claude-opus-4-7"
 
 JsonType = Literal["string", "integer", "number", "boolean", "null"]
 SemanticType = Literal[
-    "none", "date", "datetime", "email", "uuid", "url", "phone",
-    "currency", "percentage", "country", "country_code", "us_state",
-    "postal_code", "enum",
+    "none",
+    "date",
+    "datetime",
+    "email",
+    "uuid",
+    "url",
+    "phone",
+    "currency",
+    "percentage",
+    "country",
+    "country_code",
+    "us_state",
+    "postal_code",
+    "enum",
 ]
 
 
@@ -46,8 +55,7 @@ class FieldSpec(BaseModel):
         description="A more specific type when applicable (date, email, uuid, etc).",
     )
     nullable: bool = Field(
-        description="True if any sampled value was blank/missing; "
-                    "false if every sampled value was populated.",
+        description="True if any sampled value was blank/missing; " "false if every sampled value was populated.",
     )
     enum_values: list[str] | None = Field(
         default=None,
@@ -66,6 +74,7 @@ class InferredSchema(BaseModel):
 
 
 # ---------- file sampling ----------
+
 
 @dataclass
 class TabSample:
@@ -96,12 +105,14 @@ def sample_file(path: Path, max_rows: int = SAMPLE_ROWS) -> FileSample:
         headers = [str(h) if h is not None else "" for h in all_rows[0]]
         body = all_rows[1:]
         sampled = body[:max_rows]
-        tabs.append(TabSample(
-            tab_name=ws.title,
-            headers=headers,
-            rows=sampled,
-            total_rows=len(body),
-        ))
+        tabs.append(
+            TabSample(
+                tab_name=ws.title,
+                headers=headers,
+                rows=sampled,
+                total_rows=len(body),
+            )
+        )
     return FileSample(filename=path.name, tabs=tabs)
 
 
@@ -111,6 +122,7 @@ def _markdown_table(headers: list[str], rows: list[list[Any]]) -> str:
             return ""
         s = str(v)
         return s.replace("|", "\\|").replace("\n", " ")
+
     head = "| " + " | ".join(cell(h) for h in headers) + " |"
     sep = "| " + " | ".join("---" for _ in headers) + " |"
     body = "\n".join("| " + " | ".join(cell(v) for v in row) + " |" for row in rows)
@@ -124,8 +136,7 @@ def render_samples(samples: list[FileSample]) -> str:
         parts.append(f"## File: `{f.filename}`")
         for tab in f.tabs:
             parts.append(
-                f"\n### Tab: `{tab.tab_name}`  "
-                f"({tab.total_rows} data rows total, showing first {len(tab.rows)})"
+                f"\n### Tab: `{tab.tab_name}`  " f"({tab.total_rows} data rows total, showing first {len(tab.rows)})"
             )
             parts.append(_markdown_table(tab.headers, tab.rows))
     return "\n\n".join(parts)

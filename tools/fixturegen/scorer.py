@@ -6,13 +6,13 @@ Layout-aware. The verdict aggregates issues:
   - any row/cell issue → "needs_review"
   - no issues → "valid"
 """
-from dataclasses import dataclass, field, asdict
+
+import json
+from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
-import json
 
 import openpyxl
-
 from profiler import Profile, value_matches
 from sheet import Sheet
 
@@ -20,7 +20,7 @@ from sheet import Sheet
 @dataclass
 class Issue:
     reason: str
-    severity: str             # "structural" (→ reject) or "data" (→ needs_review)
+    severity: str  # "structural" (→ reject) or "data" (→ needs_review)
     row: int | None = None
     col: int | None = None
     label: str | None = None
@@ -29,7 +29,7 @@ class Issue:
 
 @dataclass
 class Verdict:
-    verdict: str              # valid | needs_review | reject
+    verdict: str  # valid | needs_review | reject
     issues: list[Issue] = field(default_factory=list)
 
     def reasons(self) -> list[str]:
@@ -49,6 +49,7 @@ def read_sheet(path: Path) -> Sheet:
 
 
 # ---------- layout-specific extraction ----------
+
 
 def _extract_flat(sheet: Sheet, profile: Profile) -> tuple[list[str], list[list[Any]]]:
     headers = [str(h) if h is not None else "" for h in sheet[0]]
@@ -88,6 +89,7 @@ EXTRACTORS = {
 
 # ---------- core scoring ----------
 
+
 def score_sheet(sheet: Sheet, profile: Profile) -> Verdict:
     issues: list[Issue] = []
     extractor = EXTRACTORS[profile.layout]
@@ -96,21 +98,25 @@ def score_sheet(sheet: Sheet, profile: Profile) -> Verdict:
     # 1. Structural: do headers/labels match what we expect?
     expected = profile.expected_labels
     if len(headers) != len(expected):
-        issues.append(Issue(
-            reason="column_count_mismatch",
-            severity="structural",
-            details={"expected": len(expected), "got": len(headers)},
-        ))
+        issues.append(
+            Issue(
+                reason="column_count_mismatch",
+                severity="structural",
+                details={"expected": len(expected), "got": len(headers)},
+            )
+        )
     else:
         for i, (got, want) in enumerate(zip(headers, expected)):
             if got != want:
-                issues.append(Issue(
-                    reason="header_renamed",
-                    severity="structural",
-                    col=i,
-                    label=want,
-                    details={"expected": want, "got": got},
-                ))
+                issues.append(
+                    Issue(
+                        reason="header_renamed",
+                        severity="structural",
+                        col=i,
+                        label=want,
+                        details={"expected": want, "got": got},
+                    )
+                )
 
     # If structural issues already make per-cell checks meaningless,
     # short-circuit. (We still try the cell checks below — they're useful
@@ -119,21 +125,25 @@ def score_sheet(sheet: Sheet, profile: Profile) -> Verdict:
     if not issues:
         # 2. Row count sanity
         if len(data) < profile.min_data_rows:
-            issues.append(Issue(
-                reason="too_few_rows",
-                severity="structural",
-                details={"expected_min": profile.min_data_rows, "got": len(data)},
-            ))
+            issues.append(
+                Issue(
+                    reason="too_few_rows",
+                    severity="structural",
+                    details={"expected_min": profile.min_data_rows, "got": len(data)},
+                )
+            )
 
     # 3. Per-cell: nullability + dtype
     for r_idx, row in enumerate(data):
         is_blank_row = all(v is None for v in row)
         if is_blank_row:
-            issues.append(Issue(
-                reason="empty_row",
-                severity="data",
-                row=r_idx,
-            ))
+            issues.append(
+                Issue(
+                    reason="empty_row",
+                    severity="data",
+                    row=r_idx,
+                )
+            )
             continue
         for c_idx, value in enumerate(row):
             if c_idx >= len(expected):
@@ -144,31 +154,41 @@ def score_sheet(sheet: Sheet, profile: Profile) -> Verdict:
                 continue
             if value is None:
                 if not profile.nullable.get(label, False):
-                    issues.append(Issue(
-                        reason="missing_value",
-                        severity="data",
-                        row=r_idx, col=c_idx, label=label,
-                    ))
+                    issues.append(
+                        Issue(
+                            reason="missing_value",
+                            severity="data",
+                            row=r_idx,
+                            col=c_idx,
+                            label=label,
+                        )
+                    )
                 continue
             if not value_matches(value, dtype):
-                issues.append(Issue(
-                    reason="wrong_dtype",
-                    severity="data",
-                    row=r_idx, col=c_idx, label=label,
-                    details={"expected": dtype, "got": repr(value)[:40]},
-                ))
+                issues.append(
+                    Issue(
+                        reason="wrong_dtype",
+                        severity="data",
+                        row=r_idx,
+                        col=c_idx,
+                        label=label,
+                        details={"expected": dtype, "got": repr(value)[:40]},
+                    )
+                )
 
     # 4. Duplicate-row detection (data rows only)
     seen: dict[tuple, int] = {}
     for r_idx, row in enumerate(data):
         key = tuple(row)
         if key in seen and not all(v is None for v in row):
-            issues.append(Issue(
-                reason="duplicate_row",
-                severity="data",
-                row=r_idx,
-                details={"duplicate_of": seen[key]},
-            ))
+            issues.append(
+                Issue(
+                    reason="duplicate_row",
+                    severity="data",
+                    row=r_idx,
+                    details={"duplicate_of": seen[key]},
+                )
+            )
         else:
             seen[key] = r_idx
 
@@ -198,12 +218,12 @@ def verdict_to_dict(v: Verdict) -> dict:
 
 def main():
     import argparse
+
     from profiler import load_profiles
 
     p = argparse.ArgumentParser()
     p.add_argument("xlsx", type=Path)
-    p.add_argument("--profile-key", required=True,
-                   help="e.g. orders__flat or sales_by_region_quarter__crosstab")
+    p.add_argument("--profile-key", required=True, help="e.g. orders__flat or sales_by_region_quarter__crosstab")
     p.add_argument("--profiles", type=Path, default=Path("artifacts/profiles.json"))
     args = p.parse_args()
 

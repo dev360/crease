@@ -7,6 +7,7 @@ Workflow:
   3. Click "Infer schema" — Claude reads samples, returns a JSON Schema
   4. Review, optionally edit, save to disk
 """
+
 from __future__ import annotations
 
 import json
@@ -15,7 +16,6 @@ import tempfile
 from pathlib import Path
 
 import streamlit as st
-
 from schema_inference import (
     FileSample,
     InferredSchema,
@@ -23,7 +23,6 @@ from schema_inference import (
     sample_file,
     to_json_schema,
 )
-
 
 SCHEMAS_DIR = Path("artifacts/cohort_schemas")
 SCHEMAS_DIR.mkdir(parents=True, exist_ok=True)
@@ -37,7 +36,7 @@ st.caption("Drop files into a cohort. Claude infers a JSON Schema for the rows."
 with st.sidebar:
     st.subheader("Settings")
     api_key_present = bool(os.environ.get("ANTHROPIC_API_KEY"))
-    st.write(("API key: detected" if api_key_present else "Set `ANTHROPIC_API_KEY` env var"))
+    st.write("API key: detected" if api_key_present else "Set `ANTHROPIC_API_KEY` env var")
     model = st.selectbox(
         "Model",
         ["claude-opus-4-7", "claude-sonnet-4-6", "claude-haiku-4-5"],
@@ -86,14 +85,10 @@ if uploaded_files:
         for f in samples:
             st.markdown(f"**`{f.filename}`**")
             for tab in f.tabs:
-                st.caption(
-                    f"Tab `{tab.tab_name}` — {tab.total_rows} rows total, "
-                    f"showing first {len(tab.rows)}"
-                )
+                st.caption(f"Tab `{tab.tab_name}` — {tab.total_rows} rows total, " f"showing first {len(tab.rows)}")
                 preview = [tab.headers] + tab.rows[:5]
                 st.dataframe(
-                    {h: [r[i] if i < len(r) else None for r in tab.rows[:5]]
-                     for i, h in enumerate(tab.headers)},
+                    {h: [r[i] if i < len(r) else None for r in tab.rows[:5]] for i, h in enumerate(tab.headers)},
                     use_container_width=True,
                 )
 
@@ -107,9 +102,13 @@ if st.button("Infer schema", type="primary", disabled=not can_run):
         with st.spinner(f"Asking {model}..."):
             try:
                 import anthropic
+
                 client = anthropic.Anthropic()
                 inferred, meta = infer_schema(
-                    samples, description, client=client, model=model,
+                    samples,
+                    description,
+                    client=client,
+                    model=model,
                 )
                 st.session_state["inferred"] = inferred.model_dump()
                 st.session_state["meta"] = meta
@@ -139,14 +138,17 @@ if "inferred" in st.session_state:
 
     with tab_view:
         st.dataframe(
-            [{
-                "name": f.name,
-                "type": f.json_type,
-                "semantic": f.semantic_type,
-                "nullable": f.nullable,
-                "enum_values": ", ".join(f.enum_values) if f.enum_values else "",
-                "description": f.description,
-            } for f in inferred.fields],
+            [
+                {
+                    "name": f.name,
+                    "type": f.json_type,
+                    "semantic": f.semantic_type,
+                    "nullable": f.nullable,
+                    "enum_values": ", ".join(f.enum_values) if f.enum_values else "",
+                    "description": f.description,
+                }
+                for f in inferred.fields
+            ],
             use_container_width=True,
         )
 

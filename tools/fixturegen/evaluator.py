@@ -13,14 +13,14 @@ Output a metrics.json with:
   - per-reason recall (when actual reason = X, how often did we detect it?)
   - precision/recall summary
 """
+
 import argparse
 import json
 from collections import defaultdict
 from pathlib import Path
 
 from profiler import build_profiles
-from scorer import score_file, verdict_to_dict
-
+from scorer import score_file
 
 VERDICTS = ["valid", "needs_review", "reject"]
 
@@ -45,17 +45,17 @@ def evaluate(eval_dir: Path) -> dict:
         predicted_reasons = set(verdict.reasons())
         actual_reason = label.get("reason")
 
-        records.append({
-            "file": str(xlsx_path.relative_to(eval_dir)),
-            "actual_verdict": label["verdict"],
-            "predicted_verdict": verdict.verdict,
-            "actual_reason": actual_reason,
-            "predicted_reasons": sorted(predicted_reasons),
-            "verdict_correct": label["verdict"] == verdict.verdict,
-            "reason_detected": (
-                actual_reason in predicted_reasons if actual_reason else True
-            ),
-        })
+        records.append(
+            {
+                "file": str(xlsx_path.relative_to(eval_dir)),
+                "actual_verdict": label["verdict"],
+                "predicted_verdict": verdict.verdict,
+                "actual_reason": actual_reason,
+                "predicted_reasons": sorted(predicted_reasons),
+                "verdict_correct": label["verdict"] == verdict.verdict,
+                "reason_detected": (actual_reason in predicted_reasons if actual_reason else True),
+            }
+        )
 
     # confusion matrix
     confusion = {a: {p: 0 for p in VERDICTS} for a in VERDICTS}

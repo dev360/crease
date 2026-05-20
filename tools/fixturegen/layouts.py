@@ -14,11 +14,12 @@ Each layout knows:
   - where "label" cells live (for label-targeted corruptions)
   - where "data" cells live (for value-targeted corruptions)
 """
-from dataclasses import dataclass
-from typing import Callable
-import random
 
-from series import Series, CrosstabSeries
+import random
+from collections.abc import Callable
+from dataclasses import dataclass
+
+from series import CrosstabSeries, Series
 from sheet import Sheet
 
 
@@ -27,11 +28,12 @@ class Layout:
     name: str
     applicable_corruptions: list[str]
     label_cells: Callable[[Sheet], list[tuple[int, int]]]
-    data_cells:  Callable[[Sheet], list[tuple[int, int]]]
-    data_rows:   Callable[[Sheet], list[int]]
+    data_cells: Callable[[Sheet], list[tuple[int, int]]]
+    data_rows: Callable[[Sheet], list[int]]
 
 
 # ---------- flat ----------
+
 
 def render_flat(series: Series, n_records: int, rng: random.Random) -> Sheet:
     sheet: Sheet = [list(series.columns)]
@@ -54,6 +56,7 @@ def _flat_data_rows(sheet: Sheet) -> list[int]:
 
 # ---------- transposed (header row + single value row) ----------
 
+
 def render_transposed(series: Series, n_records: int, rng: random.Random) -> Sheet:
     record = series.make_record()
     return [list(series.columns), [record[c] for c in series.columns]]
@@ -73,6 +76,7 @@ def _transposed_data_rows(sheet: Sheet) -> list[int]:
 
 # ---------- property_sheet (each row is [label, value]) ----------
 
+
 def render_property_sheet(series: Series, n_records: int, rng: random.Random) -> Sheet:
     record = series.make_record()
     return [[c, record[c]] for c in series.columns]
@@ -91,6 +95,7 @@ def _property_data_rows(sheet: Sheet) -> list[int]:
 
 
 # ---------- crosstab ----------
+
 
 def render_crosstab(spec: CrosstabSeries, rng: random.Random) -> Sheet:
     sheet: Sheet = [[spec.corner_label] + list(spec.col_labels)]
@@ -127,8 +132,14 @@ LAYOUTS: dict[str, Layout] = {
     "flat": Layout(
         name="flat",
         applicable_corruptions=[
-            "drop_cell", "blank_row", "shift_row_left", "shift_block_down",
-            "wrong_dtype", "duplicate_row", "drop_column", "rename_label",
+            "drop_cell",
+            "blank_row",
+            "shift_row_left",
+            "shift_block_down",
+            "wrong_dtype",
+            "duplicate_row",
+            "drop_column",
+            "rename_label",
             "swap_columns",
         ],
         label_cells=_flat_label_cells,
@@ -138,7 +149,10 @@ LAYOUTS: dict[str, Layout] = {
     "transposed": Layout(
         name="transposed",
         applicable_corruptions=[
-            "drop_cell", "wrong_dtype", "rename_label", "shift_row_left",
+            "drop_cell",
+            "wrong_dtype",
+            "rename_label",
+            "shift_row_left",
             "drop_column",
         ],
         label_cells=_transposed_label_cells,
@@ -148,8 +162,12 @@ LAYOUTS: dict[str, Layout] = {
     "property_sheet": Layout(
         name="property_sheet",
         applicable_corruptions=[
-            "drop_cell", "blank_row", "wrong_dtype", "rename_label",
-            "duplicate_row", "shift_block_down",
+            "drop_cell",
+            "blank_row",
+            "wrong_dtype",
+            "rename_label",
+            "duplicate_row",
+            "shift_block_down",
         ],
         label_cells=_property_label_cells,
         data_cells=_property_data_cells,
@@ -158,8 +176,14 @@ LAYOUTS: dict[str, Layout] = {
     "crosstab": Layout(
         name="crosstab",
         applicable_corruptions=[
-            "drop_cell", "blank_row", "shift_row_left", "shift_block_down",
-            "wrong_dtype", "duplicate_row", "drop_column", "rename_label",
+            "drop_cell",
+            "blank_row",
+            "shift_row_left",
+            "shift_block_down",
+            "wrong_dtype",
+            "duplicate_row",
+            "drop_column",
+            "rename_label",
             "swap_columns",
         ],
         label_cells=_crosstab_label_cells,

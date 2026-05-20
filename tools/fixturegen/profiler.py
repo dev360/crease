@@ -5,15 +5,15 @@ For v1 we derive profiles directly from the Series/CrosstabSeries
 definitions in series.py. In a real system the profiler would learn
 profiles from known-good customer files; that's a later step.
 """
-from dataclasses import dataclass, asdict
-from typing import Any
+
 import datetime as dt
 import json
 import re
+from dataclasses import asdict, dataclass
 from pathlib import Path
+from typing import Any
 
-from series import SERIES, CROSSTABS, Series, CrosstabSeries
-
+from series import CROSSTABS, SERIES, CrosstabSeries, Series
 
 DTYPE_INT = "int"
 DTYPE_FLOAT = "float"
@@ -78,10 +78,10 @@ def value_matches(value: Any, dtype: str) -> bool:
 
 @dataclass
 class Profile:
-    name: str           # e.g. "orders_flat"
-    source: str         # series or crosstab name
-    layout: str         # flat | transposed | property_sheet | crosstab
-    expected_labels: list[str]   # column names / labels / col-dim headers
+    name: str  # e.g. "orders_flat"
+    source: str  # series or crosstab name
+    layout: str  # flat | transposed | property_sheet | crosstab
+    expected_labels: list[str]  # column names / labels / col-dim headers
     expected_dtypes: dict[str, str]
     nullable: dict[str, bool]
     min_data_rows: int = 1
@@ -135,9 +135,7 @@ def build_profiles() -> dict[str, Profile]:
 
 
 def save_profiles(profiles: dict[str, Profile], path: Path) -> None:
-    path.write_text(json.dumps(
-        {k: asdict(v) for k, v in profiles.items()}, indent=2
-    ))
+    path.write_text(json.dumps({k: asdict(v) for k, v in profiles.items()}, indent=2))
 
 
 def load_profiles(path: Path) -> dict[str, Profile]:
@@ -147,6 +145,7 @@ def load_profiles(path: Path) -> dict[str, Profile]:
 
 def main():
     import argparse
+
     p = argparse.ArgumentParser()
     p.add_argument("--out", type=Path, default=Path("artifacts/profiles.json"))
     args = p.parse_args()

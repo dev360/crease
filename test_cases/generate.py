@@ -9,6 +9,7 @@ For each case in ALL_CASES, write:
   test_cases/<name>/expected_issues.json
   test_cases/<name>/notes.md
 """
+
 from pathlib import Path
 
 from .cases import ALL_CASES
@@ -25,18 +26,19 @@ def generate(root: Path = None) -> dict:
             summary["corrupted"] += 1
         else:
             summary["clean"] += 1
-        summary["cases"].append({
-            "name": case.name,
-            "verdict": case.expected_verdict,
-            "n_issues": len(case.expected_issues),
-        })
+        summary["cases"].append(
+            {
+                "name": case.name,
+                "verdict": case.expected_verdict,
+                "n_issues": len(case.expected_issues),
+            }
+        )
     return summary
 
 
 def main():
     summary = generate()
-    print(f"Generated {summary['total']} cases: "
-          f"{summary['clean']} clean, {summary['corrupted']} corrupted")
+    print(f"Generated {summary['total']} cases: " f"{summary['clean']} clean, {summary['corrupted']} corrupted")
     for c in summary["cases"]:
         print(f"  {c['name']:35} verdict={c['verdict']:14} issues={c['n_issues']}")
 

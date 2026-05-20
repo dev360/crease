@@ -9,17 +9,17 @@ reproduce them.
 Faker is used for data, seeded for reproducibility. Every case is deterministic:
 running this file twice produces byte-identical fixtures.
 """
+
 from __future__ import annotations
 
-from typing import Any
 import random
 
 from faker import Faker
 
-from .types import TestCase, new_workbook, write_rows
-
+from .types import TestCase, new_workbook
 
 # ---------- shared helpers ----------
+
 
 def _seeded_faker(seed: int) -> Faker:
     Faker.seed(seed)
@@ -30,13 +30,15 @@ def _seeded_faker(seed: int) -> Faker:
 def _mk_order_rows(fake: Faker, n: int, first_id: int = 1000) -> list[dict]:
     rows = []
     for i in range(n):
-        rows.append({
-            "order_id":       f"ORD-{first_id + i:04d}",
-            "order_date":     fake.date_between(start_date="-180d", end_date="today").isoformat(),
-            "customer_email": fake.email(),
-            "quantity":       random.randint(1, 100),
-            "unit_price":     round(random.uniform(10, 1000), 2),
-        })
+        rows.append(
+            {
+                "order_id": f"ORD-{first_id + i:04d}",
+                "order_date": fake.date_between(start_date="-180d", end_date="today").isoformat(),
+                "customer_email": fake.email(),
+                "quantity": random.randint(1, 100),
+                "unit_price": round(random.uniform(10, 1000), 2),
+            }
+        )
     return rows
 
 
@@ -69,22 +71,24 @@ def case_flat_simple() -> TestCase:
         "template_id": "flat_simple",
         "version": 1,
         "description": "Flat order table.",
-        "entities": [{
-            "name": "order",
-            "cardinality": "many",
-            "locate": {
-                "tab": "Orders",
-                "orientation": "flat",
-                "header_row": 0,
-            },
-            "fields": [
-                {"name": "order_id",       "source_column": "order_id",       "type": "string",  "pattern": r"^ORD-\d{4}$"},
-                {"name": "order_date",     "source_column": "order_date",     "type": "date"},
-                {"name": "customer_email", "source_column": "customer_email", "type": "email"},
-                {"name": "quantity",       "source_column": "quantity",       "type": "integer", "minimum": 1},
-                {"name": "unit_price",     "source_column": "unit_price",     "type": "number",  "minimum": 0},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "order",
+                "cardinality": "many",
+                "locate": {
+                    "tab": "Orders",
+                    "orientation": "flat",
+                    "header_row": 0,
+                },
+                "fields": [
+                    {"name": "order_id", "source_column": "order_id", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                    {"name": "order_date", "source_column": "order_date", "type": "date"},
+                    {"name": "customer_email", "source_column": "customer_email", "type": "email"},
+                    {"name": "quantity", "source_column": "quantity", "type": "integer", "minimum": 1},
+                    {"name": "unit_price", "source_column": "unit_price", "type": "number", "minimum": 0},
+                ],
+            }
+        ],
     }
 
     expected = _envelope("flat_simple", orders=rows)
@@ -109,7 +113,7 @@ def case_flat_with_title_rows() -> TestCase:
     ws.append(["Acme Corporation — Order Export"])
     ws.append(["Generated: 2025-04-15"])
     ws.append([])
-    ws.append(list(rows[0].keys()))   # row 3 = header row
+    ws.append(list(rows[0].keys()))  # row 3 = header row
     for r in rows:
         ws.append(list(r.values()))
 
@@ -117,23 +121,25 @@ def case_flat_with_title_rows() -> TestCase:
         "template_id": "flat_with_title_rows",
         "version": 1,
         "description": "Flat order table preceded by title/metadata rows.",
-        "entities": [{
-            "name": "order",
-            "cardinality": "many",
-            "locate": {
-                "tab": "Orders",
-                "orientation": "flat",
-                "header_row": 3,                  # headers on row 3
-                "data_starts_row": 4,
-            },
-            "fields": [
-                {"name": "order_id",       "source_column": "order_id",       "type": "string",  "pattern": r"^ORD-\d{4}$"},
-                {"name": "order_date",     "source_column": "order_date",     "type": "date"},
-                {"name": "customer_email", "source_column": "customer_email", "type": "email"},
-                {"name": "quantity",       "source_column": "quantity",       "type": "integer", "minimum": 1},
-                {"name": "unit_price",     "source_column": "unit_price",     "type": "number",  "minimum": 0},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "order",
+                "cardinality": "many",
+                "locate": {
+                    "tab": "Orders",
+                    "orientation": "flat",
+                    "header_row": 3,  # headers on row 3
+                    "data_starts_row": 4,
+                },
+                "fields": [
+                    {"name": "order_id", "source_column": "order_id", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                    {"name": "order_date", "source_column": "order_date", "type": "date"},
+                    {"name": "customer_email", "source_column": "customer_email", "type": "email"},
+                    {"name": "quantity", "source_column": "quantity", "type": "integer", "minimum": 1},
+                    {"name": "unit_price", "source_column": "unit_price", "type": "number", "minimum": 0},
+                ],
+            }
+        ],
     }
 
     expected = _envelope("flat_with_title_rows", orders=rows)
@@ -166,27 +172,29 @@ def case_flat_with_totals_row() -> TestCase:
         "template_id": "flat_with_totals_row",
         "version": 1,
         "description": "Flat order table ending with a TOTAL summary row that should be ignored.",
-        "entities": [{
-            "name": "order",
-            "cardinality": "many",
-            "locate": {
-                "tab": "Orders",
-                "orientation": "flat",
-                "header_row": 0,
-                "data_ends_at": {
-                    "type": "value_match",
-                    "column": 0,
-                    "value": "TOTAL",
+        "entities": [
+            {
+                "name": "order",
+                "cardinality": "many",
+                "locate": {
+                    "tab": "Orders",
+                    "orientation": "flat",
+                    "header_row": 0,
+                    "data_ends_at": {
+                        "type": "value_match",
+                        "column": 0,
+                        "value": "TOTAL",
+                    },
                 },
-            },
-            "fields": [
-                {"name": "order_id",       "source_column": "order_id",       "type": "string",  "pattern": r"^ORD-\d{4}$"},
-                {"name": "order_date",     "source_column": "order_date",     "type": "date"},
-                {"name": "customer_email", "source_column": "customer_email", "type": "email"},
-                {"name": "quantity",       "source_column": "quantity",       "type": "integer", "minimum": 1},
-                {"name": "unit_price",     "source_column": "unit_price",     "type": "number",  "minimum": 0},
-            ],
-        }],
+                "fields": [
+                    {"name": "order_id", "source_column": "order_id", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                    {"name": "order_date", "source_column": "order_date", "type": "date"},
+                    {"name": "customer_email", "source_column": "customer_email", "type": "email"},
+                    {"name": "quantity", "source_column": "quantity", "type": "integer", "minimum": 1},
+                    {"name": "unit_price", "source_column": "unit_price", "type": "number", "minimum": 0},
+                ],
+            }
+        ],
     }
 
     expected = _envelope("flat_with_totals_row", orders=rows)
@@ -205,42 +213,44 @@ def case_property_sheet_cover() -> TestCase:
     """A clean property_sheet — labels in col A, values in col B, no scattering."""
     fake = _seeded_faker(45)
     record = {
-        "company_name":      fake.company(),
-        "tax_id":            fake.bothify("##-#######"),
-        "primary_contact":   fake.name(),
-        "contact_email":     fake.email(),
-        "submitted_on":      fake.date_between(start_date="-30d", end_date="today").isoformat(),
+        "company_name": fake.company(),
+        "tax_id": fake.bothify("##-#######"),
+        "primary_contact": fake.name(),
+        "contact_email": fake.email(),
+        "submitted_on": fake.date_between(start_date="-30d", end_date="today").isoformat(),
     }
 
     wb = new_workbook()
     ws = wb.create_sheet("Profile")
-    ws.append(["Company Name",    record["company_name"]])
-    ws.append(["Tax ID",          record["tax_id"]])
+    ws.append(["Company Name", record["company_name"]])
+    ws.append(["Tax ID", record["tax_id"]])
     ws.append(["Primary Contact", record["primary_contact"]])
-    ws.append(["Contact Email",   record["contact_email"]])
-    ws.append(["Submitted On",    record["submitted_on"]])
+    ws.append(["Contact Email", record["contact_email"]])
+    ws.append(["Submitted On", record["submitted_on"]])
 
     template = {
         "template_id": "property_sheet_cover",
         "version": 1,
         "description": "Company profile as a property sheet (labels in column A, values in column B).",
-        "entities": [{
-            "name": "company",
-            "cardinality": "one",
-            "locate": {
-                "tab": "Profile",
-                "orientation": "property_sheet",
-                "label_col": 0,
-                "value_col": 1,
-            },
-            "fields": [
-                {"name": "company_name",    "source_label": "Company Name",    "type": "string"},
-                {"name": "tax_id",          "source_label": "Tax ID",          "type": "string", "pattern": r"^\d{2}-\d{7}$"},
-                {"name": "primary_contact", "source_label": "Primary Contact", "type": "string"},
-                {"name": "contact_email",   "source_label": "Contact Email",   "type": "email"},
-                {"name": "submitted_on",    "source_label": "Submitted On",    "type": "date"},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "company",
+                "cardinality": "one",
+                "locate": {
+                    "tab": "Profile",
+                    "orientation": "property_sheet",
+                    "label_col": 0,
+                    "value_col": 1,
+                },
+                "fields": [
+                    {"name": "company_name", "source_label": "Company Name", "type": "string"},
+                    {"name": "tax_id", "source_label": "Tax ID", "type": "string", "pattern": r"^\d{2}-\d{7}$"},
+                    {"name": "primary_contact", "source_label": "Primary Contact", "type": "string"},
+                    {"name": "contact_email", "source_label": "Contact Email", "type": "email"},
+                    {"name": "submitted_on", "source_label": "Submitted On", "type": "date"},
+                ],
+            }
+        ],
     }
 
     expected = _envelope("property_sheet_cover", company=record)
@@ -259,65 +269,99 @@ def case_anchored_scattered() -> TestCase:
     """Cover sheet with scattered properties — not a clean rectangle."""
     fake = _seeded_faker(46)
     record = {
-        "company_name":  fake.company(),
-        "period":        "Q1 2025",
-        "submitted_by":  fake.name(),
+        "company_name": fake.company(),
+        "period": "Q1 2025",
+        "submitted_by": fake.name(),
         "contact_email": fake.email(),
-        "submitted_on":  fake.date_between(start_date="-30d", end_date="today").isoformat(),
+        "submitted_on": fake.date_between(start_date="-30d", end_date="today").isoformat(),
     }
 
     wb = new_workbook()
     ws = wb.create_sheet("Cover")
     # Title block
-    ws.append([f"{record['company_name']} Quarterly Sales Report"])     # row 0
+    ws.append([f"{record['company_name']} Quarterly Sales Report"])  # row 0
     ws.append([])
     ws.append([])
-    ws.append(["Reporting Period:", record["period"]])                  # row 3
+    ws.append(["Reporting Period:", record["period"]])  # row 3
     ws.append([])
-    ws.append(["Submitted by:",     record["submitted_by"]])            # row 5
-    ws.append(["Contact:",          record["contact_email"]])           # row 6
+    ws.append(["Submitted by:", record["submitted_by"]])  # row 5
+    ws.append(["Contact:", record["contact_email"]])  # row 6
     ws.append([])
     ws.append([])
     ws.append(["Notes:"])
     ws.append(["First-time submission — please confirm receipt"])
     ws.append([])
-    ws.append(["Date sent:",        record["submitted_on"]])            # row 12
+    ws.append(["Date sent:", record["submitted_on"]])  # row 12
 
     template = {
         "template_id": "anchored_scattered",
         "version": 1,
         "description": "Cover sheet with scattered properties (gaps and arbitrary positions).",
-        "entities": [{
-            "name": "report",
-            "cardinality": "one",
-            "locate": {
-                "tab": "Cover",
-                "orientation": "anchored",
-            },
-            "fields": [
-                {"name": "period",
-                 "anchor": {"label_match": "Reporting Period", "match_mode": "contains", "value_at": "right", "offset": 1},
-                 "type": "string", "pattern": r"^Q[1-4] \d{4}$"},
-                {"name": "submitted_by",
-                 "anchor": {"label_match": "Submitted by",     "match_mode": "contains", "value_at": "right", "offset": 1},
-                 "type": "string"},
-                {"name": "contact_email",
-                 "anchor": {"label_match": "Contact",          "match_mode": "contains", "value_at": "right", "offset": 1},
-                 "type": "email"},
-                {"name": "submitted_on",
-                 "anchor": {"label_match": "Date sent",        "match_mode": "contains", "value_at": "right", "offset": 1},
-                 "type": "date"},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "report",
+                "cardinality": "one",
+                "locate": {
+                    "tab": "Cover",
+                    "orientation": "anchored",
+                },
+                "fields": [
+                    {
+                        "name": "period",
+                        "anchor": {
+                            "label_match": "Reporting Period",
+                            "match_mode": "contains",
+                            "value_at": "right",
+                            "offset": 1,
+                        },
+                        "type": "string",
+                        "pattern": r"^Q[1-4] \d{4}$",
+                    },
+                    {
+                        "name": "submitted_by",
+                        "anchor": {
+                            "label_match": "Submitted by",
+                            "match_mode": "contains",
+                            "value_at": "right",
+                            "offset": 1,
+                        },
+                        "type": "string",
+                    },
+                    {
+                        "name": "contact_email",
+                        "anchor": {
+                            "label_match": "Contact",
+                            "match_mode": "contains",
+                            "value_at": "right",
+                            "offset": 1,
+                        },
+                        "type": "email",
+                    },
+                    {
+                        "name": "submitted_on",
+                        "anchor": {
+                            "label_match": "Date sent",
+                            "match_mode": "contains",
+                            "value_at": "right",
+                            "offset": 1,
+                        },
+                        "type": "date",
+                    },
+                ],
+            }
+        ],
     }
 
     # Note: company_name is in the title but we don't extract it (operator chose not to)
-    expected = _envelope("anchored_scattered", report={
-        "period":        record["period"],
-        "submitted_by":  record["submitted_by"],
-        "contact_email": record["contact_email"],
-        "submitted_on":  record["submitted_on"],
-    })
+    expected = _envelope(
+        "anchored_scattered",
+        report={
+            "period": record["period"],
+            "submitted_by": record["submitted_by"],
+            "contact_email": record["contact_email"],
+            "submitted_on": record["submitted_on"],
+        },
+    )
 
     return TestCase(
         name="anchored_scattered",
@@ -333,18 +377,18 @@ def case_multi_tab_acme() -> TestCase:
     """The full Acme example: Cover (property_sheet) + 3 region tabs (flat with title) + Notes (ignored)."""
     fake = _seeded_faker(47)
     company_record = {
-        "company":      "Acme Corp",
-        "period":       "Q1 2025",
-        "contact":      "jane.smith@acme.com",
+        "company": "Acme Corp",
+        "period": "Q1 2025",
+        "contact": "jane.smith@acme.com",
         "submitted_on": "2025-04-15",
     }
 
     wb = new_workbook()
     cover = wb.create_sheet("Cover")
-    cover.append(["Company",       company_record["company"]])
-    cover.append(["Period",        company_record["period"]])
-    cover.append(["Contact",       company_record["contact"]])
-    cover.append(["Submitted On",  company_record["submitted_on"]])
+    cover.append(["Company", company_record["company"]])
+    cover.append(["Period", company_record["period"]])
+    cover.append(["Contact", company_record["contact"]])
+    cover.append(["Submitted On", company_record["submitted_on"]])
 
     all_orders = []
     for region in ["North", "South", "West"]:
@@ -359,8 +403,8 @@ def case_multi_tab_acme() -> TestCase:
             row = {
                 "order_id": f"ORD-{random.randint(1000, 9999)}",
                 "customer": fake.company(),
-                "date":     fake.date_between(start_date="-90d", end_date="today").isoformat(),
-                "total":    round(random.uniform(100, 50000), 2),
+                "date": fake.date_between(start_date="-90d", end_date="today").isoformat(),
+                "total": round(random.uniform(100, 50000), 2),
             }
             ws.append([row["order_id"], row["customer"], row["date"], row["total"]])
             region_rows.append({**row, "region": region})
@@ -385,9 +429,9 @@ def case_multi_tab_acme() -> TestCase:
                     "value_col": 1,
                 },
                 "fields": [
-                    {"name": "company",      "source_label": "Company",      "type": "string"},
-                    {"name": "period",       "source_label": "Period",       "type": "string", "pattern": r"^Q[1-4] \d{4}$"},
-                    {"name": "contact",      "source_label": "Contact",      "type": "email"},
+                    {"name": "company", "source_label": "Company", "type": "string"},
+                    {"name": "period", "source_label": "Period", "type": "string", "pattern": r"^Q[1-4] \d{4}$"},
+                    {"name": "contact", "source_label": "Contact", "type": "email"},
                     {"name": "submitted_on", "source_label": "Submitted On", "type": "date"},
                 ],
             },
@@ -401,10 +445,10 @@ def case_multi_tab_acme() -> TestCase:
                     "data_starts_row": 4,
                 },
                 "fields": [
-                    {"name": "order_id", "source_column": "Order ID", "type": "string",  "pattern": r"^ORD-\d{4}$"},
+                    {"name": "order_id", "source_column": "Order ID", "type": "string", "pattern": r"^ORD-\d{4}$"},
                     {"name": "customer", "source_column": "Customer", "type": "string"},
-                    {"name": "date",     "source_column": "Date",     "type": "date"},
-                    {"name": "total",    "source_column": "Total",    "type": "number",  "minimum": 0},
+                    {"name": "date", "source_column": "Date", "type": "date"},
+                    {"name": "total", "source_column": "Total", "type": "number", "minimum": 0},
                 ],
                 "enrich": [
                     {"field": "region", "source": "tab_name_regex_group", "group": 1},
@@ -434,12 +478,15 @@ def case_multi_tab_acme() -> TestCase:
 def case_dialect_acme() -> TestCase:
     """Acme's vocabulary for orders — uses descriptive column names."""
     fake = _seeded_faker(48)
-    base_rows = [{
-        "order_id":       f"ORD-{1000 + i:04d}",
-        "customer_email": fake.email(),
-        "order_date":     fake.date_between(start_date="-90d", end_date="today").isoformat(),
-        "total":          round(random.uniform(100, 5000), 2),
-    } for i in range(6)]
+    base_rows = [
+        {
+            "order_id": f"ORD-{1000 + i:04d}",
+            "customer_email": fake.email(),
+            "order_date": fake.date_between(start_date="-90d", end_date="today").isoformat(),
+            "total": round(random.uniform(100, 5000), 2),
+        }
+        for i in range(6)
+    ]
 
     wb = new_workbook()
     ws = wb.create_sheet("Orders")
@@ -451,21 +498,23 @@ def case_dialect_acme() -> TestCase:
         "template_id": "dialect_acme",
         "version": 1,
         "description": "Acme's order export — verbose column headers map to canonical fields.",
-        "entities": [{
-            "name": "order",
-            "cardinality": "many",
-            "locate": {
-                "tab": "Orders",
-                "orientation": "flat",
-                "header_row": 0,
-            },
-            "fields": [
-                {"name": "order_id",       "source_column": "Order ID",       "type": "string",  "pattern": r"^ORD-\d{4}$"},
-                {"name": "customer_email", "source_column": "Customer Email", "type": "email"},
-                {"name": "order_date",     "source_column": "Order Date",     "type": "date"},
-                {"name": "total",          "source_column": "Total Amount",   "type": "number",  "minimum": 0},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "order",
+                "cardinality": "many",
+                "locate": {
+                    "tab": "Orders",
+                    "orientation": "flat",
+                    "header_row": 0,
+                },
+                "fields": [
+                    {"name": "order_id", "source_column": "Order ID", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                    {"name": "customer_email", "source_column": "Customer Email", "type": "email"},
+                    {"name": "order_date", "source_column": "Order Date", "type": "date"},
+                    {"name": "total", "source_column": "Total Amount", "type": "number", "minimum": 0},
+                ],
+            }
+        ],
     }
 
     expected = _envelope("dialect_acme", orders=base_rows)
@@ -483,12 +532,15 @@ def case_dialect_acme() -> TestCase:
 def case_dialect_globex() -> TestCase:
     """Globex's vocabulary for the same canonical orders — terse column names."""
     fake = _seeded_faker(49)
-    base_rows = [{
-        "order_id":       f"ORD-{2000 + i:04d}",
-        "customer_email": fake.email(),
-        "order_date":     fake.date_between(start_date="-90d", end_date="today").isoformat(),
-        "total":          round(random.uniform(100, 5000), 2),
-    } for i in range(6)]
+    base_rows = [
+        {
+            "order_id": f"ORD-{2000 + i:04d}",
+            "customer_email": fake.email(),
+            "order_date": fake.date_between(start_date="-90d", end_date="today").isoformat(),
+            "total": round(random.uniform(100, 5000), 2),
+        }
+        for i in range(6)
+    ]
 
     wb = new_workbook()
     ws = wb.create_sheet("Sheet1")
@@ -500,21 +552,23 @@ def case_dialect_globex() -> TestCase:
         "template_id": "dialect_globex",
         "version": 1,
         "description": "Globex's order export — terse headers, same canonical fields as Acme.",
-        "entities": [{
-            "name": "order",
-            "cardinality": "many",
-            "locate": {
-                "tab": "Sheet1",
-                "orientation": "flat",
-                "header_row": 0,
-            },
-            "fields": [
-                {"name": "order_id",       "source_column": "OrderNum", "type": "string",  "pattern": r"^ORD-\d{4}$"},
-                {"name": "customer_email", "source_column": "Email",    "type": "email"},
-                {"name": "order_date",     "source_column": "Day",      "type": "date"},
-                {"name": "total",          "source_column": "Amt",      "type": "number",  "minimum": 0},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "order",
+                "cardinality": "many",
+                "locate": {
+                    "tab": "Sheet1",
+                    "orientation": "flat",
+                    "header_row": 0,
+                },
+                "fields": [
+                    {"name": "order_id", "source_column": "OrderNum", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                    {"name": "customer_email", "source_column": "Email", "type": "email"},
+                    {"name": "order_date", "source_column": "Day", "type": "date"},
+                    {"name": "total", "source_column": "Amt", "type": "number", "minimum": 0},
+                ],
+            }
+        ],
     }
 
     expected = _envelope("dialect_globex", orders=base_rows)
@@ -543,18 +597,20 @@ def _flat_simple_base_rows(seed: int = 50) -> tuple[list[dict], dict]:
         "template_id": "TBD",
         "version": 1,
         "description": "Flat order table.",
-        "entities": [{
-            "name": "order",
-            "cardinality": "many",
-            "locate": {"tab": "Orders", "orientation": "flat", "header_row": 0},
-            "fields": [
-                {"name": "order_id",       "source_column": "order_id",       "type": "string",  "pattern": r"^ORD-\d{4}$"},
-                {"name": "order_date",     "source_column": "order_date",     "type": "date"},
-                {"name": "customer_email", "source_column": "customer_email", "type": "email"},
-                {"name": "quantity",       "source_column": "quantity",       "type": "integer", "minimum": 1},
-                {"name": "unit_price",     "source_column": "unit_price",     "type": "number",  "minimum": 0},
-            ],
-        }],
+        "entities": [
+            {
+                "name": "order",
+                "cardinality": "many",
+                "locate": {"tab": "Orders", "orientation": "flat", "header_row": 0},
+                "fields": [
+                    {"name": "order_id", "source_column": "order_id", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                    {"name": "order_date", "source_column": "order_date", "type": "date"},
+                    {"name": "customer_email", "source_column": "customer_email", "type": "email"},
+                    {"name": "quantity", "source_column": "quantity", "type": "integer", "minimum": 1},
+                    {"name": "unit_price", "source_column": "unit_price", "type": "number", "minimum": 0},
+                ],
+            }
+        ],
     }
     return rows, template
 
@@ -576,12 +632,14 @@ def case_corrupted_missing_value() -> TestCase:
 
     expected = _envelope("corrupted_missing_value", orders=rows)
 
-    expected_issues = [{
-        "entity": "order",
-        "row": bad_row_idx,
-        "field": "customer_email",
-        "reason": "missing_required",
-    }]
+    expected_issues = [
+        {
+            "entity": "order",
+            "row": bad_row_idx,
+            "field": "customer_email",
+            "reason": "missing_required",
+        }
+    ]
 
     return TestCase(
         name="corrupted_missing_value",
@@ -612,12 +670,14 @@ def case_corrupted_wrong_type() -> TestCase:
 
     expected = _envelope("corrupted_wrong_type", orders=rows)
 
-    expected_issues = [{
-        "entity": "order",
-        "row": bad_row_idx,
-        "field": "quantity",
-        "reason": "wrong_type",
-    }]
+    expected_issues = [
+        {
+            "entity": "order",
+            "row": bad_row_idx,
+            "field": "quantity",
+            "reason": "wrong_type",
+        }
+    ]
 
     return TestCase(
         name="corrupted_wrong_type",
@@ -649,8 +709,7 @@ def case_corrupted_renamed_header() -> TestCase:
     expected = _envelope("corrupted_renamed_header", orders=extracted_rows)
 
     expected_issues = [
-        {"entity": "order", "row": i, "field": "customer_email", "reason": "missing_required"}
-        for i in range(len(rows))
+        {"entity": "order", "row": i, "field": "customer_email", "reason": "missing_required"} for i in range(len(rows))
     ]
 
     return TestCase(
@@ -662,7 +721,7 @@ def case_corrupted_renamed_header() -> TestCase:
         expected_verdict="reject",
         expected_issues=expected_issues,
         notes="Tests the failure mode where the template's source_column doesn't match. "
-              "Every row is missing the mapped field — should escalate to 'reject' verdict.",
+        "Every row is missing the mapped field — should escalate to 'reject' verdict.",
     )
 
 
@@ -682,12 +741,14 @@ def case_corrupted_below_minimum() -> TestCase:
 
     expected = _envelope("corrupted_below_minimum", orders=rows)
 
-    expected_issues = [{
-        "entity": "order",
-        "row": bad_row_idx,
-        "field": "unit_price",
-        "reason": "below_minimum",
-    }]
+    expected_issues = [
+        {
+            "entity": "order",
+            "row": bad_row_idx,
+            "field": "unit_price",
+            "reason": "below_minimum",
+        }
+    ]
 
     return TestCase(
         name="corrupted_below_minimum",

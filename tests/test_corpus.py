@@ -20,9 +20,7 @@ CORPUS_ROOT = Path(__file__).parent.parent / "test_cases"
 
 def _case_dirs() -> list[Path]:
     return sorted(
-        p
-        for p in CORPUS_ROOT.iterdir()
-        if p.is_dir() and (p / "input.xlsx").exists() and (p / "template.yml").exists()
+        p for p in CORPUS_ROOT.iterdir() if p.is_dir() and (p / "input.xlsx").exists() and (p / "template.yml").exists()
     )
 
 

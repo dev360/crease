@@ -6,6 +6,7 @@ sheets; the writer dumps a sheet to xlsx.
 Rows may have differing widths in principle, but layout renderers
 always produce rectangular sheets.
 """
+
 from pathlib import Path
 from typing import Any
 

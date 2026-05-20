@@ -1,10 +1,11 @@
 """TestCase dataclass and corpus helpers."""
+
 from __future__ import annotations
 
+import json
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
-import json
 
 import openpyxl
 import yaml
@@ -13,14 +14,15 @@ import yaml
 @dataclass
 class TestCase:
     """A single test fixture: input file + gold template + expected outputs."""
+
     name: str
-    description: str                   # what an operator would type to describe the cohort
-    workbook: openpyxl.Workbook        # the input .xlsx
-    template: dict                     # gold-standard Crease template
-    expected: dict                     # expected output of extract(file, template)
-    expected_verdict: str = "valid"    # valid | needs_review | reject
+    description: str  # what an operator would type to describe the cohort
+    workbook: openpyxl.Workbook  # the input .xlsx
+    template: dict  # gold-standard Crease template
+    expected: dict  # expected output of extract(file, template)
+    expected_verdict: str = "valid"  # valid | needs_review | reject
     expected_issues: list[dict] = field(default_factory=list)
-    notes: str = ""                    # human notes on what this case tests
+    notes: str = ""  # human notes on what this case tests
 
     def write(self, root: Path) -> Path:
         target_dir = root / self.name
@@ -38,16 +40,18 @@ class TestCase:
         (target_dir / "description.txt").write_text(self.description.strip() + "\n")
 
         # expected.json — canonical JSON the extractor should produce
-        (target_dir / "expected.json").write_text(
-            json.dumps(self.expected, default=str, indent=2)
-        )
+        (target_dir / "expected.json").write_text(json.dumps(self.expected, default=str, indent=2))
 
         # expected_issues.json — for corrupted cases
         (target_dir / "expected_issues.json").write_text(
-            json.dumps({
-                "verdict": self.expected_verdict,
-                "issues": self.expected_issues,
-            }, default=str, indent=2)
+            json.dumps(
+                {
+                    "verdict": self.expected_verdict,
+                    "issues": self.expected_issues,
+                },
+                default=str,
+                indent=2,
+            )
         )
 
         # notes.md

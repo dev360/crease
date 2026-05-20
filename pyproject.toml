@@ -89,7 +89,7 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "test_cases/cases.py" = ["E501"]
 "tests/*" = ["E501"]
-"tools/**/*.py" = ["E501", "B", "C"]
+"tools/**/*.py" = ["E501", "B", "C", "UP"]
 
 [tool.semantic_release]
 tag_format = "v{version}"

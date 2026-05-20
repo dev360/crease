@@ -117,9 +117,7 @@ class TestProjectionHappyPath:
             pytest.skip("no cardinality=many entity in flat_simple")
 
         first_field = template.entities[0].fields[0]
-        py_type = {"string": str, "integer": int, "number": float, "boolean": bool}.get(
-            first_field.type, str
-        )
+        py_type = {"string": str, "integer": int, "number": float, "boolean": bool}.get(first_field.type, str)
 
         class MinimalSubset(BaseModel):
             pass

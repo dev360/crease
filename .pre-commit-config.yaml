@@ -8,6 +8,10 @@ repos:
       - id: check-symlinks
       - id: check-toml
       - id: check-yaml
+        # `args: [--unsafe]` permits python-tag YAML constructors (used by mkdocs.yml
+        # for the emoji extension). Without --unsafe, check-yaml refuses to load
+        # `!!python/name:material.extensions.emoji.twemoji` and fails the hook.
+        args: [--unsafe]
         exclude: ^test_cases/.*template\.yml$
       - id: end-of-file-fixer
         exclude: CHANGELOG.md

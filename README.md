@@ -285,13 +285,50 @@ crease test test_cases/
 ## Installation
 
 ```bash
-pip install crease
+pip install crease                  # core: extract + validate, returns dicts
+pip install crease[pandas]          # adds result.to_pandas() (also pulls Pandera)
 ```
 
-Pure Python — openpyxl, pandas, Pandera, Pydantic, PyYAML. No LLM, no
-network, no surprises at runtime. Template authoring (by hand, by an LLM
-tool you build, by import from another schema language) is out of scope
-for this library.
+Core deps: openpyxl, pydantic, pyyaml, python-calamine. Pandas and Pandera
+are **optional extras** — if you only use `extract` and `to_pydantic`,
+you don't pay for pandas. No LLM, no network calls at runtime.
+
+### Local development
+
+The repo uses [Poetry](https://python-poetry.org/) and the `src/` layout.
+
+```bash
+# 1. Clone
+git clone git@github.com:dev360/crease.git
+cd crease
+
+# 2. Install (core + extras + test deps) into a Poetry-managed venv
+poetry install --with test --all-extras
+
+# 3. Run the corpus
+poetry run pytest
+
+# 4. Optional: build the docs site locally
+poetry run mkdocs serve     # http://localhost:8000
+
+# 5. Hook up pre-commit (runs ruff + conventional-commit on every commit)
+poetry run pre-commit install
+poetry run pre-commit run --all-files
+```
+
+If you're not using Poetry, plain `pip` works fine against the venv of
+your choice:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[pandas]"           # editable install with the pandas extra
+pip install pytest faker             # test deps
+pytest
+```
+
+Template authoring (by hand, by an LLM tool you build, by import from
+another schema language) is out of scope for this library.
 
 ---
 

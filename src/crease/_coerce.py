@@ -84,7 +84,7 @@ def coerce(value: Any, field: FieldSpec) -> Any:
 
     # Strings (and stringish semantic types) — accept any scalar as string
     if t in ("string", "email", "uuid", "url"):
-        if isinstance(value, (dt.datetime, dt.date)) and not field.treat_as_text:
+        if isinstance(value, dt.datetime | dt.date) and not field.treat_as_text:
             # Excel autoconvert: the operator wanted text, Excel made it a date.
             raise CoercionError(
                 value=value,
@@ -117,7 +117,7 @@ def coerce(value: Any, field: FieldSpec) -> Any:
     if t == "number":
         if isinstance(value, bool):
             raise CoercionError(value, "number")
-        if isinstance(value, (int, float)):
+        if isinstance(value, int | float):
             return float(value)
         if isinstance(value, str):
             try:
@@ -175,9 +175,9 @@ def check_constraints(value: Any, field: FieldSpec) -> str | None:
             return "pattern_mismatch"
     if field.enum is not None and value not in field.enum:
         return "enum_violation"
-    if field.minimum is not None and isinstance(value, (int, float)) and value < field.minimum:
+    if field.minimum is not None and isinstance(value, int | float) and value < field.minimum:
         return "below_minimum"
-    if field.maximum is not None and isinstance(value, (int, float)) and value > field.maximum:
+    if field.maximum is not None and isinstance(value, int | float) and value > field.maximum:
         return "above_maximum"
     # Built-in semantic regex checks (only if no custom pattern was supplied)
     if field.pattern is None and isinstance(value, str):

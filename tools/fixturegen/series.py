@@ -6,9 +6,11 @@ A CrosstabSeries produces a (row_labels, col_labels, matrix) triple.
 
 The layout module decides how to render either into a Sheet.
 """
-from dataclasses import dataclass, field
-from typing import Callable, Any
+
 import random
+from collections.abc import Callable
+from dataclasses import dataclass
+from typing import Any
 
 from faker import Faker
 
@@ -16,6 +18,7 @@ fake = Faker()
 
 
 # ---------- Series: flat records ----------
+
 
 @dataclass
 class Series:
@@ -83,33 +86,40 @@ def _company_profile_row() -> dict:
 SERIES: dict[str, Series] = {
     "orders": Series(
         name="orders",
-        columns=["order_id", "order_date", "customer_name", "customer_email",
-                 "product_sku", "quantity", "unit_price"],
+        columns=["order_id", "order_date", "customer_name", "customer_email", "product_sku", "quantity", "unit_price"],
         row_factory=_orders_row,
     ),
     "employees": Series(
         name="employees",
-        columns=["employee_id", "full_name", "department", "hire_date",
-                 "salary", "manager_email"],
+        columns=["employee_id", "full_name", "department", "hire_date", "salary", "manager_email"],
         row_factory=_employees_row,
     ),
     "inventory": Series(
         name="inventory",
-        columns=["sku", "product_name", "warehouse", "on_hand",
-                 "reorder_point", "last_counted"],
+        columns=["sku", "product_name", "warehouse", "on_hand", "reorder_point", "last_counted"],
         row_factory=_inventory_row,
     ),
     "company_profile": Series(
         name="company_profile",
-        columns=["company_name", "tax_id", "primary_contact", "contact_email",
-                 "phone", "address", "city", "country", "founded_year",
-                 "employee_count"],
+        columns=[
+            "company_name",
+            "tax_id",
+            "primary_contact",
+            "contact_email",
+            "phone",
+            "address",
+            "city",
+            "country",
+            "founded_year",
+            "employee_count",
+        ],
         row_factory=_company_profile_row,
     ),
 }
 
 
 # ---------- CrosstabSeries: matrix data ----------
+
 
 @dataclass
 class CrosstabSeries:
@@ -124,9 +134,7 @@ class CrosstabSeries:
 CROSSTABS: dict[str, CrosstabSeries] = {
     "sales_by_region_quarter": CrosstabSeries(
         name="sales_by_region_quarter",
-        row_label_factory=lambda: random.choice(
-            ["North", "South", "East", "West", "Central", "EMEA", "APAC", "LATAM"]
-        ),
+        row_label_factory=lambda: random.choice(["North", "South", "East", "West", "Central", "EMEA", "APAC", "LATAM"]),
         col_labels=["Q1_2025", "Q2_2025", "Q3_2025", "Q4_2025"],
         value_factory=lambda: random.randint(10_000, 500_000),
         n_row_labels=6,
@@ -142,9 +150,7 @@ CROSSTABS: dict[str, CrosstabSeries] = {
     ),
     "headcount_by_dept_year": CrosstabSeries(
         name="headcount_by_dept_year",
-        row_label_factory=lambda: random.choice(
-            ["Eng", "Sales", "Ops", "HR", "Finance", "Marketing", "Legal"]
-        ),
+        row_label_factory=lambda: random.choice(["Eng", "Sales", "Ops", "HR", "Finance", "Marketing", "Legal"]),
         col_labels=["2021", "2022", "2023", "2024", "2025"],
         value_factory=lambda: random.randint(5, 500),
         n_row_labels=5,
