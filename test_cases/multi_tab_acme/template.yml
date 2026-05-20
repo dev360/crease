@@ -1,0 +1,54 @@
+template_id: multi_tab_acme
+version: 1
+description: Acme quarterly sales — cover sheet with company info, one tab per region
+  with orders.
+entities:
+- name: company
+  cardinality: one
+  locate:
+    tab: Cover
+    orientation: property_sheet
+    label_col: 0
+    value_col: 1
+  fields:
+  - name: company
+    source_label: Company
+    type: string
+  - name: period
+    source_label: Period
+    type: string
+    pattern: ^Q[1-4] \d{4}$
+  - name: contact
+    source_label: Contact
+    type: email
+  - name: submitted_on
+    source_label: Submitted On
+    type: date
+- name: order
+  cardinality: many
+  locate:
+    tab_pattern: ^Region - (.+)$
+    orientation: flat
+    header_row: 3
+    data_starts_row: 4
+  fields:
+  - name: order_id
+    source_column: Order ID
+    type: string
+    pattern: ^ORD-\d{4}$
+  - name: customer
+    source_column: Customer
+    type: string
+  - name: date
+    source_column: Date
+    type: date
+  - name: total
+    source_column: Total
+    type: number
+    minimum: 0
+  enrich:
+  - field: region
+    source: tab_name_regex_group
+    group: 1
+ignore_tabs:
+- Notes

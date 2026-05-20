@@ -1,0 +1,49 @@
+{
+  "template_id": "corrupted_missing_value",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_id": "ORD-1000",
+      "order_date": "2026-02-16",
+      "customer_email": "michael37@example.com",
+      "quantity": 64,
+      "unit_price": 857.14
+    },
+    {
+      "order_id": "ORD-1001",
+      "order_date": "2025-12-04",
+      "customer_email": "jeffrey81@example.org",
+      "quantity": 47,
+      "unit_price": 641.04
+    },
+    {
+      "order_id": "ORD-1002",
+      "order_date": "2026-01-20",
+      "customer_email": "pettyluis@example.org",
+      "quantity": 32,
+      "unit_price": 695.62
+    },
+    {
+      "order_id": "ORD-1003",
+      "order_date": "2025-12-01",
+      "customer_email": null,
+      "quantity": 99,
+      "unit_price": 970.63
+    },
+    {
+      "order_id": "ORD-1004",
+      "order_date": "2025-12-05",
+      "customer_email": "steelemallory@example.net",
+      "quantity": 11,
+      "unit_price": 543.11
+    },
+    {
+      "order_id": "ORD-1005",
+      "order_date": "2026-03-14",
+      "customer_email": "vsmith@example.com",
+      "quantity": 29,
+      "unit_price": 679.68
+    }
+  ]
+}

@@ -1,0 +1,43 @@
+{
+  "template_id": "dialect_globex",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_id": "ORD-2000",
+      "customer_email": "coopersarah@example.com",
+      "order_date": "2026-04-25",
+      "total": 427.73
+    },
+    {
+      "order_id": "ORD-2001",
+      "customer_email": "frazierkatherine@example.com",
+      "order_date": "2026-03-02",
+      "total": 2124.89
+    },
+    {
+      "order_id": "ORD-2002",
+      "customer_email": "mccoywilliam@example.net",
+      "order_date": "2026-03-14",
+      "total": 641.47
+    },
+    {
+      "order_id": "ORD-2003",
+      "customer_email": "ricardo32@example.org",
+      "order_date": "2026-03-27",
+      "total": 3785.35
+    },
+    {
+      "order_id": "ORD-2004",
+      "customer_email": "wnguyen@example.com",
+      "order_date": "2026-04-16",
+      "total": 2605.3
+    },
+    {
+      "order_id": "ORD-2005",
+      "customer_email": "stanleyhailey@example.net",
+      "order_date": "2026-03-07",
+      "total": 343.4
+    }
+  ]
+}

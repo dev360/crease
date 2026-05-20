@@ -1,0 +1,1 @@
+Acme's quarterly sales report. The Cover tab has company info (name, period, contact, submission date) as label-value pairs. Then one tab per region named like 'Region - North' — each has two title rows, a header row, then order rows. There's also a Notes tab that should be ignored.

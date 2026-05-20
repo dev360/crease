@@ -1,0 +1,29 @@
+template_id: corrupted_renamed_header
+version: 1
+description: Flat order table.
+entities:
+- name: order
+  cardinality: many
+  locate:
+    tab: Orders
+    orientation: flat
+    header_row: 0
+  fields:
+  - name: order_id
+    source_column: order_id
+    type: string
+    pattern: ^ORD-\d{4}$
+  - name: order_date
+    source_column: order_date
+    type: date
+  - name: customer_email
+    source_column: customer_email
+    type: email
+  - name: quantity
+    source_column: quantity
+    type: integer
+    minimum: 1
+  - name: unit_price
+    source_column: unit_price
+    type: number
+    minimum: 0

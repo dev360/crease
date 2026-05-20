@@ -1,0 +1,1 @@
+Order table that ends with a TOTAL row summarizing the orders above.

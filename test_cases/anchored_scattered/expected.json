@@ -1,0 +1,11 @@
+{
+  "template_id": "anchored_scattered",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "report": {
+    "period": "Q1 2025",
+    "submitted_by": "Stacy Walters",
+    "contact_email": "brandyvalentine@example.org",
+    "submitted_on": "2026-04-18"
+  }
+}

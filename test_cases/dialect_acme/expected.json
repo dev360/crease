@@ -1,0 +1,43 @@
+{
+  "template_id": "dialect_acme",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_id": "ORD-1000",
+      "customer_email": "david84@example.net",
+      "order_date": "2026-03-06",
+      "total": 2785.97
+    },
+    {
+      "order_id": "ORD-1001",
+      "customer_email": "zmartin@example.net",
+      "order_date": "2026-02-26",
+      "total": 746.27
+    },
+    {
+      "order_id": "ORD-1002",
+      "customer_email": "jefferyhunt@example.net",
+      "order_date": "2026-03-02",
+      "total": 3586.58
+    },
+    {
+      "order_id": "ORD-1003",
+      "customer_email": "anthonycoleman@example.org",
+      "order_date": "2026-04-02",
+      "total": 1581.03
+    },
+    {
+      "order_id": "ORD-1004",
+      "customer_email": "stephaniebrown@example.net",
+      "order_date": "2026-03-15",
+      "total": 4697.79
+    },
+    {
+      "order_id": "ORD-1005",
+      "customer_email": "holly13@example.com",
+      "order_date": "2026-03-12",
+      "total": 1044.32
+    }
+  ]
+}

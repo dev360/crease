@@ -1,0 +1,25 @@
+template_id: dialect_globex
+version: 1
+description: Globex's order export — terse headers, same canonical fields as Acme.
+entities:
+- name: order
+  cardinality: many
+  locate:
+    tab: Sheet1
+    orientation: flat
+    header_row: 0
+  fields:
+  - name: order_id
+    source_column: OrderNum
+    type: string
+    pattern: ^ORD-\d{4}$
+  - name: customer_email
+    source_column: Email
+    type: email
+  - name: order_date
+    source_column: Day
+    type: date
+  - name: total
+    source_column: Amt
+    type: number
+    minimum: 0

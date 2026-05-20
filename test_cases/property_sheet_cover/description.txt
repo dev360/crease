@@ -1,0 +1,1 @@
+A company profile sheet — each row has a field name in column A and its value in column B.

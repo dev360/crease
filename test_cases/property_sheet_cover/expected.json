@@ -1,0 +1,12 @@
+{
+  "template_id": "property_sheet_cover",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "company": {
+    "company_name": "Butler-Scott",
+    "tax_id": "45-0170141",
+    "primary_contact": "Savannah Banks",
+    "contact_email": "taylorlaura@example.net",
+    "submitted_on": "2026-04-22"
+  }
+}

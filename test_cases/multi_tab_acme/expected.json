@@ -1,0 +1,118 @@
+{
+  "template_id": "multi_tab_acme",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "company": {
+    "company": "Acme Corp",
+    "period": "Q1 2025",
+    "contact": "jane.smith@acme.com",
+    "submitted_on": "2025-04-15"
+  },
+  "orders": [
+    {
+      "order_id": "ORD-6764",
+      "customer": "Scott-Hughes",
+      "date": "2026-04-13",
+      "total": 3220.01,
+      "region": "North"
+    },
+    {
+      "order_id": "ORD-8432",
+      "customer": "Hopkins-Bernard",
+      "date": "2026-02-17",
+      "total": 28582.45,
+      "region": "North"
+    },
+    {
+      "order_id": "ORD-5217",
+      "customer": "Ramsey-Smith",
+      "date": "2026-05-01",
+      "total": 25670.97,
+      "region": "North"
+    },
+    {
+      "order_id": "ORD-7429",
+      "customer": "Bradley-Hall",
+      "date": "2026-04-05",
+      "total": 30816.51,
+      "region": "North"
+    },
+    {
+      "order_id": "ORD-7857",
+      "customer": "Ramos-Allen",
+      "date": "2026-04-08",
+      "total": 32965.48,
+      "region": "North"
+    },
+    {
+      "order_id": "ORD-2678",
+      "customer": "Gill, Allen and Pittman",
+      "date": "2026-05-10",
+      "total": 131.26,
+      "region": "South"
+    },
+    {
+      "order_id": "ORD-8889",
+      "customer": "Martinez Inc",
+      "date": "2026-03-21",
+      "total": 36220.49,
+      "region": "South"
+    },
+    {
+      "order_id": "ORD-1149",
+      "customer": "Romero-Hess",
+      "date": "2026-02-25",
+      "total": 45878.45,
+      "region": "South"
+    },
+    {
+      "order_id": "ORD-6170",
+      "customer": "Mcintosh LLC",
+      "date": "2026-03-08",
+      "total": 28421.65,
+      "region": "South"
+    },
+    {
+      "order_id": "ORD-4769",
+      "customer": "Rodriguez, Butler and Gomez",
+      "date": "2026-05-06",
+      "total": 11963.32,
+      "region": "South"
+    },
+    {
+      "order_id": "ORD-9420",
+      "customer": "Kelly-Cunningham",
+      "date": "2026-04-01",
+      "total": 18018.2,
+      "region": "West"
+    },
+    {
+      "order_id": "ORD-4965",
+      "customer": "Chan, Green and Cross",
+      "date": "2026-04-29",
+      "total": 1759.88,
+      "region": "West"
+    },
+    {
+      "order_id": "ORD-7130",
+      "customer": "Wilson, Skinner and James",
+      "date": "2026-03-11",
+      "total": 35864.94,
+      "region": "West"
+    },
+    {
+      "order_id": "ORD-6790",
+      "customer": "Galloway, Grant and Wallace",
+      "date": "2026-05-16",
+      "total": 30088.68,
+      "region": "West"
+    },
+    {
+      "order_id": "ORD-4210",
+      "customer": "Burton, Juarez and Jones",
+      "date": "2026-04-04",
+      "total": 12007.1,
+      "region": "West"
+    }
+  ]
+}

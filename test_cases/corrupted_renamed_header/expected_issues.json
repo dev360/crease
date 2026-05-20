@@ -1,0 +1,41 @@
+{
+  "verdict": "reject",
+  "issues": [
+    {
+      "entity": "order",
+      "row": 0,
+      "field": "customer_email",
+      "reason": "missing_required"
+    },
+    {
+      "entity": "order",
+      "row": 1,
+      "field": "customer_email",
+      "reason": "missing_required"
+    },
+    {
+      "entity": "order",
+      "row": 2,
+      "field": "customer_email",
+      "reason": "missing_required"
+    },
+    {
+      "entity": "order",
+      "row": 3,
+      "field": "customer_email",
+      "reason": "missing_required"
+    },
+    {
+      "entity": "order",
+      "row": 4,
+      "field": "customer_email",
+      "reason": "missing_required"
+    },
+    {
+      "entity": "order",
+      "row": 5,
+      "field": "customer_email",
+      "reason": "missing_required"
+    }
+  ]
+}

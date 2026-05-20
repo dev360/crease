@@ -1,0 +1,11 @@
+{
+  "verdict": "needs_review",
+  "issues": [
+    {
+      "entity": "order",
+      "row": 3,
+      "field": "customer_email",
+      "reason": "missing_required"
+    }
+  ]
+}

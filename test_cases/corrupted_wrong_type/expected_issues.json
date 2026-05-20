@@ -1,0 +1,11 @@
+{
+  "verdict": "needs_review",
+  "issues": [
+    {
+      "entity": "order",
+      "row": 2,
+      "field": "quantity",
+      "reason": "wrong_type"
+    }
+  ]
+}

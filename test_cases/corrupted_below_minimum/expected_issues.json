@@ -1,0 +1,11 @@
+{
+  "verdict": "needs_review",
+  "issues": [
+    {
+      "entity": "order",
+      "row": 1,
+      "field": "unit_price",
+      "reason": "below_minimum"
+    }
+  ]
+}

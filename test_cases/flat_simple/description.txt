@@ -1,0 +1,1 @@
+A flat table of order records — order ID, date, customer email, quantity, unit price.

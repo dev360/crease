@@ -1,0 +1,42 @@
+{
+  "template_id": "flat_with_totals_row",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_id": "ORD-1000",
+      "order_date": "2026-01-31",
+      "customer_email": "thompsonjeffrey@example.org",
+      "quantity": 53,
+      "unit_price": 524.82
+    },
+    {
+      "order_id": "ORD-1001",
+      "order_date": "2025-12-29",
+      "customer_email": "garciakim@example.net",
+      "quantity": 90,
+      "unit_price": 863.42
+    },
+    {
+      "order_id": "ORD-1002",
+      "order_date": "2026-05-16",
+      "customer_email": "xgarza@example.net",
+      "quantity": 23,
+      "unit_price": 385.77
+    },
+    {
+      "order_id": "ORD-1003",
+      "order_date": "2026-03-19",
+      "customer_email": "charles49@example.org",
+      "quantity": 38,
+      "unit_price": 38.81
+    },
+    {
+      "order_id": "ORD-1004",
+      "order_date": "2025-12-09",
+      "customer_email": "chapmanjoseph@example.com",
+      "quantity": 15,
+      "unit_price": 573.0
+    }
+  ]
+}

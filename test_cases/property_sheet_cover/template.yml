@@ -1,0 +1,29 @@
+template_id: property_sheet_cover
+version: 1
+description: Company profile as a property sheet (labels in column A, values in column
+  B).
+entities:
+- name: company
+  cardinality: one
+  locate:
+    tab: Profile
+    orientation: property_sheet
+    label_col: 0
+    value_col: 1
+  fields:
+  - name: company_name
+    source_label: Company Name
+    type: string
+  - name: tax_id
+    source_label: Tax ID
+    type: string
+    pattern: ^\d{2}-\d{7}$
+  - name: primary_contact
+    source_label: Primary Contact
+    type: string
+  - name: contact_email
+    source_label: Contact Email
+    type: email
+  - name: submitted_on
+    source_label: Submitted On
+    type: date

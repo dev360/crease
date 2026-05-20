@@ -1,0 +1,1 @@
+Flat order table — one row has a blank customer_email.

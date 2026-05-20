@@ -1,0 +1,25 @@
+template_id: dialect_acme
+version: 1
+description: Acme's order export — verbose column headers map to canonical fields.
+entities:
+- name: order
+  cardinality: many
+  locate:
+    tab: Orders
+    orientation: flat
+    header_row: 0
+  fields:
+  - name: order_id
+    source_column: Order ID
+    type: string
+    pattern: ^ORD-\d{4}$
+  - name: customer_email
+    source_column: Customer Email
+    type: email
+  - name: order_date
+    source_column: Order Date
+    type: date
+  - name: total
+    source_column: Total Amount
+    type: number
+    minimum: 0

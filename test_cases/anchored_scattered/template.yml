@@ -1,0 +1,39 @@
+template_id: anchored_scattered
+version: 1
+description: Cover sheet with scattered properties (gaps and arbitrary positions).
+entities:
+- name: report
+  cardinality: one
+  locate:
+    tab: Cover
+    orientation: anchored
+  fields:
+  - name: period
+    anchor:
+      label_match: Reporting Period
+      match_mode: contains
+      value_at: right
+      offset: 1
+    type: string
+    pattern: ^Q[1-4] \d{4}$
+  - name: submitted_by
+    anchor:
+      label_match: Submitted by
+      match_mode: contains
+      value_at: right
+      offset: 1
+    type: string
+  - name: contact_email
+    anchor:
+      label_match: Contact
+      match_mode: contains
+      value_at: right
+      offset: 1
+    type: email
+  - name: submitted_on
+    anchor:
+      label_match: Date sent
+      match_mode: contains
+      value_at: right
+      offset: 1
+    type: date
