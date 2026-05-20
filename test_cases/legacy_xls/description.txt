@@ -1,0 +1,3 @@
+A small order table stored in the legacy .xls (BIFF) format. Verifies that
+crease can read .xls files end-to-end via the calamine backend — openpyxl
+cannot read this format at all.

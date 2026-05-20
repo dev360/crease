@@ -31,13 +31,14 @@ class Session:
                 log.warning(session.report().errors())
     """
 
-    def __init__(self, path: str | Path, template: Template):
+    def __init__(self, path: str | Path, template: Template, *, engine: str | None = None):
         self._path = Path(path)
         self._template = template
+        self._engine = engine
         self._result: ExtractResult | None = None
 
     def __enter__(self) -> Session:
-        self._result = extract(self._path, self._template)
+        self._result = extract(self._path, self._template, engine=self._engine)
         return self
 
     def __exit__(self, *exc_info) -> None:
@@ -74,14 +75,21 @@ class Session:
         return validate(self.result, self._template)
 
 
-def open(path: str | Path, template: Template) -> Session:  # noqa: A001 - shadowing builtin is intentional
+def open(  # noqa: A001 - shadowing builtin is intentional
+    path: str | Path,
+    template: Template,
+    *,
+    engine: str | None = None,
+) -> Session:
     """Open a file for multi-entity extraction. Use as a context manager.
 
     Args:
-        path: Path to the .xlsx file.
+        path: Path to the source file.
         template: A loaded `crease.Template`.
+        engine: ``"calamine"`` or ``"openpyxl"`` to force a specific
+            backend. See `crease.extract` for the default behavior.
 
     Returns:
         An unentered `Session`. Use it inside a ``with`` block.
     """
-    return Session(path, template)
+    return Session(path, template, engine=engine)

@@ -6,15 +6,14 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from openpyxl.worksheet.worksheet import Worksheet
-
 from crease._coerce import normalize_header
+from crease._workbook import Sheet, Workbook
 from crease.template_model import HeaderAnchor, Locate
 
 
 @dataclass
 class TabMatch:
-    worksheet: Any
+    worksheet: Sheet
     name: str
     regex_match: re.Match | None  # set when matched via tab_pattern
 
@@ -54,22 +53,22 @@ def parse_cell_range(s: str) -> CellRange:
     )
 
 
-def find_tabs(workbook, locate: Locate, ignore_tabs: list[str]) -> list[TabMatch]:
+def find_tabs(workbook: Workbook, locate: Locate, ignore_tabs: list[str]) -> list[TabMatch]:
     """Return all worksheets matching this locate spec."""
     matches: list[TabMatch] = []
-    for ws in workbook.worksheets:
-        if ws.title in ignore_tabs:
+    for ws in workbook.sheets:
+        if ws.name in ignore_tabs:
             continue
-        if locate.tab is not None and ws.title == locate.tab:
-            matches.append(TabMatch(worksheet=ws, name=ws.title, regex_match=None))
+        if locate.tab is not None and ws.name == locate.tab:
+            matches.append(TabMatch(worksheet=ws, name=ws.name, regex_match=None))
         elif locate.tab_pattern is not None:
-            m = re.match(locate.tab_pattern, ws.title)
+            m = re.match(locate.tab_pattern, ws.name)
             if m:
-                matches.append(TabMatch(worksheet=ws, name=ws.title, regex_match=m))
+                matches.append(TabMatch(worksheet=ws, name=ws.name, regex_match=m))
     return matches
 
 
-def find_header_row(ws: Worksheet, anchor: HeaderAnchor, max_rows_to_scan: int = 50) -> int | None:
+def find_header_row(ws: Sheet, anchor: HeaderAnchor, max_rows_to_scan: int = 50) -> int | None:
     """Scan for the first row containing the anchor text. Returns 0-indexed row."""
     target = anchor.text
     mode = anchor.match_mode
@@ -84,7 +83,7 @@ def find_header_row(ws: Worksheet, anchor: HeaderAnchor, max_rows_to_scan: int =
             return bool(re.search(target, s))
         return False
 
-    for r_idx, row in enumerate(ws.iter_rows(values_only=True, max_row=max_rows_to_scan)):
+    for r_idx, row in enumerate(ws.iter_rows(max_row=max_rows_to_scan)):
         cells = list(row)
         if anchor.column is not None:
             if anchor.column < len(cells) and cells[anchor.column] is not None:
@@ -97,24 +96,19 @@ def find_header_row(ws: Worksheet, anchor: HeaderAnchor, max_rows_to_scan: int =
     return None
 
 
-def resolve_header_row(ws: Worksheet, locate: Locate) -> int:
+def resolve_header_row(ws: Sheet, locate: Locate) -> int:
     """Anchor wins if set; otherwise the literal `header_row`."""
     if locate.header_anchor is not None:
         found = find_header_row(ws, locate.header_anchor)
         if found is None:
-            raise ValueError(f"header_anchor {locate.header_anchor.text!r} not found in tab {ws.title!r}")
+            raise ValueError(f"header_anchor {locate.header_anchor.text!r} not found in tab {ws.name!r}")
         return found
     return locate.header_row
 
 
-def hidden_row_indices(ws: Worksheet) -> set[int]:
-    """0-indexed set of hidden row indices."""
-    hidden: set[int] = set()
-    for r_idx, dim in ws.row_dimensions.items():
-        if dim.hidden:
-            # openpyxl uses 1-indexed rows
-            hidden.add(r_idx - 1)
-    return hidden
+def hidden_row_indices(ws: Sheet) -> set[int]:
+    """0-indexed set of hidden row indices. Empty when the backend can't tell."""
+    return ws.hidden_row_indices()
 
 
 def normalize_headers(headers: list[Any]) -> list[str]:

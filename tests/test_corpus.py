@@ -24,11 +24,12 @@ def _case_dirs() -> list[Path]:
     )
 
 
+@pytest.mark.parametrize("engine", ["calamine", "openpyxl"])
 @pytest.mark.parametrize("case_dir", _case_dirs(), ids=lambda p: p.name)
-def test_extraction(case_dir: Path) -> None:
-    """Canonical payload matches the labeled expected.json."""
+def test_extraction(case_dir: Path, engine: str) -> None:
+    """Canonical payload matches the labeled expected.json on both backends."""
     template = Template.load(case_dir / "template.yml")
-    result = extract(case_dir / "input.xlsx", template)
+    result = extract(case_dir / "input.xlsx", template, engine=engine)
     expected = json.loads((case_dir / "expected.json").read_text())
 
     for key, exp_value in expected.items():
