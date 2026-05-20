@@ -1,0 +1,101 @@
+site_name: crease
+site_description: Declarative Excel-to-JSON extraction and validation
+site_url: https://dev360.github.io/crease/
+repo_url: https://github.com/dev360/crease
+repo_name: dev360/crease
+edit_uri: edit/main/docs/
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.indexes
+    - toc.follow
+    - content.code.copy
+    - content.code.annotate
+  palette:
+    - scheme: default
+      primary: blue grey
+      accent: indigo
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: blue grey
+      accent: indigo
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+
+nav:
+  - Home: index.md
+  - Why crease: why.md
+  - Quick start: quickstart.md
+  - Guides:
+      - guides/templates.md
+      - guides/layouts.md
+      - guides/streaming.md
+      - guides/pydantic-projection.md
+      - guides/pandas-projection.md
+  - Reference:
+      - reference/extract.md
+      - reference/validate.md
+      - reference/template.md
+      - reference/errors.md
+  - CLI: cli.md
+  - Conventions: conventions.md
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - def_list
+  - footnotes
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.tasklist:
+      custom_checkbox: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+plugins:
+  - search
+  - mkdocstrings:
+      handlers:
+        python:
+          paths: [src]
+          options:
+            docstring_style: google
+            show_source: false
+            show_root_heading: true
+            show_root_full_path: false
+            show_signature_annotations: true
+            separate_signature: true
+            merge_init_into_class: true
+            members_order: source
+            filters:
+              - "!^_"
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/dev360/crease

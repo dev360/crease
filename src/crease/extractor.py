@@ -162,7 +162,7 @@ class ExtractResult:
             return value
         return _coerce_to_model(value, model, loc=(entity, None))
 
-    def iter(self, entity: str, *, model: Any | None = None, allow_partial: bool = False):
+    def iter(self, entity: str, *, model: Any | None = None, allow_partial: bool = False) -> Iterator[Any]:
         """Iterate over records of a ``cardinality: many`` entity.
 
         Args:
@@ -246,7 +246,7 @@ class ExtractResult:
             return self.get(entity, model=model, allow_partial=allow_partial)
         return list(self.iter(entity, model=model, allow_partial=allow_partial))
 
-    def to_pandas(self, entity: str, *, allow_partial: bool = False):
+    def to_pandas(self, entity: str, *, allow_partial: bool = False) -> Any:
         """Project canonical records into a pandas DataFrame.
 
         Requires the ``pandas`` extra (``pip install crease[pandas]``).

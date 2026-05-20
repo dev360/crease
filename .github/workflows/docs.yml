@@ -1,0 +1,67 @@
+name: Docs
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+      - ".github/workflows/docs.yml"
+  pull_request:
+    paths:
+      - "docs/**"
+      - "src/**"
+      - "mkdocs.yml"
+      - "pyproject.toml"
+  workflow_dispatch:
+
+# Allow only one concurrent docs build per branch.
+concurrency:
+  group: "pages-${{ github.ref }}"
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install Poetry
+        run: pip install poetry==1.8
+
+      - name: Install dependencies (with docs extra)
+        run: poetry install --with test --all-extras
+
+      - name: Build docs (strict)
+        run: poetry run mkdocs build --strict
+
+      - name: Upload artifact
+        if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./site
+
+  deploy:
+    # Only deploy on push-to-main or manual dispatch — not on PRs.
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+    needs: build
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
