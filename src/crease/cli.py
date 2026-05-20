@@ -35,14 +35,28 @@ def _cmd_validate(args: argparse.Namespace) -> int:
         sys.stdout.write(json.dumps(report.to_dict(), default=str, indent=2))
         sys.stdout.write("\n")
     else:
-        sys.stderr.write(f"verdict: {report.verdict}\n")
-        sys.stderr.write(f"summary: {report.summary}\n")
-        for i in report.issues[:50]:
-            sys.stderr.write(f"  - {i.entity} row={i.row} field={i.field} reason={i.reason}\n")
+        status = "valid" if report.is_valid else ("reject" if report.has_structural else "needs_review")
+        sys.stderr.write(f"status: {status}\n")
+        sys.stderr.write(f"errors: {report.error_count()}\n")
+        for e in report.errors()[:50]:
+            loc = ".".join(str(p) for p in e.loc if p is not None)
+            sys.stderr.write(f"  - {e.type} at {loc or '<no-loc>'}: {e.msg}\n")
 
-    fail_on = args.fail_on
-    order = {"valid": 0, "needs_review": 1, "reject": 2}
-    return 1 if order[report.verdict] >= order[fail_on] else 0
+    return _exit_code(report, args.fail_on)
+
+
+def _exit_code(report, fail_on: str) -> int:
+    """CLI exit code policy:
+
+    0 if the report is at or below the configured failure threshold.
+    1 for cell-level errors when ``--fail-on=cell``.
+    2 for structural errors when ``--fail-on`` is ``structural`` or ``cell``.
+    """
+    if report.is_valid:
+        return 0
+    if report.has_structural:
+        return 2 if fail_on in ("structural", "cell") else 0
+    return 1 if fail_on == "cell" else 0
 
 
 def _cmd_check(args: argparse.Namespace) -> int:
@@ -56,7 +70,7 @@ def _cmd_check(args: argparse.Namespace) -> int:
 
 def _cmd_stream(args: argparse.Namespace) -> int:
     template = _load_template(args.template)
-    for record in stream(args.file, template, entity=args.entity):
+    for record in stream(args.file, template, entity=args.entity, allow_partial=args.allow_partial):
         sys.stdout.write(json.dumps(record, default=str))
         sys.stdout.write("\n")
     return 0
@@ -72,14 +86,15 @@ def _cmd_batch(args: argparse.Namespace) -> int:
         result, report = check(path, template)
         if out_dir:
             (out_dir / f"{path.stem}.json").write_text(json.dumps(result.canonical, default=str, indent=2))
+        status = "valid" if report.is_valid else ("reject" if report.has_structural else "needs_review")
         rows.append(
             {
                 "file": path.name,
-                "verdict": report.verdict,
-                "n_issues": len(report.issues),
+                "status": status,
+                "error_count": report.error_count(),
             }
         )
-        sys.stderr.write(f"  {path.name}: {report.verdict} ({len(report.issues)} issues)\n")
+        sys.stderr.write(f"  {path.name}: {status} ({report.error_count()} errors)\n")
     if args.report:
         Path(args.report).write_text(json.dumps(rows, indent=2))
     return 0
@@ -100,7 +115,12 @@ def build_parser() -> argparse.ArgumentParser:
     v.add_argument("file")
     v.add_argument("--template", required=True)
     v.add_argument("--json", action="store_true", help="emit JSON report to stdout")
-    v.add_argument("--fail-on", choices=["needs_review", "reject"], default="reject")
+    v.add_argument(
+        "--fail-on",
+        choices=["none", "cell", "structural"],
+        default="structural",
+        help="non-zero exit on errors at or above this severity (default: structural)",
+    )
     v.set_defaults(func=_cmd_validate)
 
     c = subs.add_parser("check", help="Extract + validate in one call.")
@@ -113,6 +133,7 @@ def build_parser() -> argparse.ArgumentParser:
     s.add_argument("file")
     s.add_argument("--template", required=True)
     s.add_argument("--entity", required=True)
+    s.add_argument("--allow-partial", action="store_true", help="yield rows even when errors are present")
     s.set_defaults(func=_cmd_stream)
 
     b = subs.add_parser("batch", help="Run check() over every .xlsx in a directory.")

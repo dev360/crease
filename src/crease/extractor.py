@@ -62,11 +62,253 @@ class RowExtractError:
 
 @dataclass
 class ExtractResult:
+    """The output of `crease.extract`.
+
+    Holds the canonical JSON plus any structural / row-level problems
+    encountered while applying the template. Use the projection methods
+    (`iter`, `get`, `to_pydantic`, `to_pandas`) to consume the data in a
+    typed shape — they halt by default if errors are present, opt-in to
+    partial recovery with `allow_partial=True`.
+
+    Attributes:
+        template_id: The id of the template used to produce this result.
+        source_file: Filename of the source xlsx (without path).
+        canonical: ``{entity_name: list_or_dict}`` — the raw extracted data.
+        errors: Structural extraction errors (missing tab, header mapping
+            failed, etc.). Internal — lifted into ``self.report.errors()``
+            on access.
+        row_errors: Per-row coercion errors. Internal — lifted into
+            ``self.report.errors()`` on access.
+        template: The `Template` used to produce this result. Set by
+            `crease.extract`; projection methods rely on it.
+    """
+
     template_id: str
     source_file: str
     canonical: dict[str, Any] = _dc_field(default_factory=dict)
     errors: list[ExtractionError] = _dc_field(default_factory=list)
     row_errors: list[RowExtractError] = _dc_field(default_factory=list)
+    template: Any = None  # set to a Template by `extract()`; typed loosely to avoid cycles
+    _cached_report: Any = None  # populated by `check()` or first `self.report` access
+
+    # ---- report access ---------------------------------------------------
+
+    @property
+    def report(self):
+        """Lazily compute (and cache) the `Report` for this result."""
+        if self._cached_report is None:
+            # Local import to avoid a module-level cycle.
+            from crease.validator import validate
+
+            if self.template is None:
+                raise RuntimeError(
+                    "ExtractResult has no template attached; cannot compute report. "
+                    "Did you build this result manually instead of via crease.extract()?"
+                )
+            self._cached_report = validate(self, self.template)
+        return self._cached_report
+
+    # ---- canonical lookup ------------------------------------------------
+
+    def _entity_value(self, entity: str) -> Any:
+        """Look up canonical data for an entity by singular or pluralized key."""
+        if entity in self.canonical:
+            return self.canonical[entity]
+        plural = _pluralize(entity)
+        return self.canonical.get(plural)
+
+    def _entity_spec(self, entity: str):
+        if self.template is None:
+            return None
+        for e in self.template.entities:
+            if e.name == entity:
+                return e
+        return None
+
+    # ---- projection API --------------------------------------------------
+
+    def get(self, entity: str, *, model: Any | None = None, allow_partial: bool = False) -> Any:
+        """Return a single record for a ``cardinality: one`` entity.
+
+        Args:
+            entity: The entity name (matches `Entity.name` in the template).
+            model: Optional Pydantic model to project into. If ``None`` and
+                pydantic is available, the canonical dict is returned as-is.
+            allow_partial: If ``False`` (default), raises
+                ``crease.ValidationError`` when the report has any errors
+                for this entity. If ``True``, returns whatever was extracted
+                regardless.
+
+        Returns:
+            A dict (or a `model` instance if `model` was passed), or
+            ``None`` if the entity wasn't found in canonical.
+
+        Raises:
+            ValueError: If the entity is declared with ``cardinality:
+                many`` — use `iter` or `to_pandas` instead.
+            crease.ValidationError: If errors are present and
+                ``allow_partial`` is ``False``.
+        """
+        spec = self._entity_spec(entity)
+        if spec is not None and spec.cardinality == "many":
+            raise ValueError(
+                f"Entity '{entity}' has cardinality='many'; use iter() / to_pandas() / "
+                f"to_pydantic() instead of get()."
+            )
+        if not allow_partial:
+            self.report.raise_if_invalid()
+        value = self._entity_value(entity)
+        if value is None or model is None:
+            return value
+        return _coerce_to_model(value, model, loc=(entity, None))
+
+    def iter(self, entity: str, *, model: Any | None = None, allow_partial: bool = False):
+        """Iterate over records of a ``cardinality: many`` entity.
+
+        Args:
+            entity: The entity name.
+            model: Optional Pydantic model to project each record into.
+            allow_partial: If ``False`` (default), raises
+                ``crease.ValidationError`` if the report has any errors
+                **before** yielding. If ``True``, yields rows that
+                successfully project; rows that fail are skipped and
+                surfaced via ``self.report.errors()``.
+
+        Yields:
+            Dicts, or `model` instances if `model` was passed.
+
+        Raises:
+            ValueError: If the entity has ``cardinality: one``.
+            crease.ValidationError: If errors are present and
+                ``allow_partial`` is ``False``.
+        """
+        spec = self._entity_spec(entity)
+        if spec is not None and spec.cardinality == "one":
+            raise ValueError(
+                f"Entity '{entity}' has cardinality='one'; use get() instead of iter()."
+            )
+        if not allow_partial:
+            self.report.raise_if_invalid()
+
+        value = self._entity_value(entity)
+        if value is None:
+            return
+        rows = value if isinstance(value, list) else [value]
+        for i, row in enumerate(rows):
+            if model is None:
+                yield row
+                continue
+            try:
+                yield _coerce_to_model(row, model, loc=(entity, i))
+            except Exception:
+                if not allow_partial:
+                    raise
+                # In partial mode, skip rows that can't project. The
+                # underlying problem is already in self.report.errors().
+
+    def to_pydantic(
+        self,
+        entity: str,
+        *,
+        model: Any | None = None,
+        allow_partial: bool = False,
+    ) -> Any:
+        """Project canonical records into Pydantic model instances.
+
+        Field matching is opportunistic by attribute name: fields the model
+        doesn't declare are silently dropped (``extra="ignore"``); type
+        mismatches raise.
+
+        Args:
+            entity: The entity name.
+            model: Pydantic ``BaseModel`` subclass to project into. If
+                ``None``, a model is auto-generated from the template's
+                field declarations via `Template.model(entity)`.
+            allow_partial: See `iter`.
+
+        Returns:
+            For ``cardinality: many`` entities, ``list[model]``.
+            For ``cardinality: one``, a single ``model`` instance (or
+            ``None`` if the entity wasn't found).
+
+        Raises:
+            crease.ValidationError: If errors are present and
+                ``allow_partial`` is ``False``, or if a row can't project
+                into the model.
+        """
+        if model is None:
+            if self.template is None:
+                raise RuntimeError("Cannot auto-generate a model without a Template attached.")
+            model = self.template.model(entity)
+
+        spec = self._entity_spec(entity)
+        if spec is not None and spec.cardinality == "one":
+            return self.get(entity, model=model, allow_partial=allow_partial)
+        return list(self.iter(entity, model=model, allow_partial=allow_partial))
+
+    def to_pandas(self, entity: str, *, allow_partial: bool = False):
+        """Project canonical records into a pandas DataFrame.
+
+        Requires the ``pandas`` extra (``pip install crease[pandas]``).
+        Pandas is imported lazily inside this method, so callers who never
+        use it don't pay the import cost.
+
+        Args:
+            entity: The entity name.
+            allow_partial: If ``False`` (default), raises
+                ``crease.ValidationError`` when the report has any errors.
+
+        Returns:
+            A pandas DataFrame. For ``cardinality: one`` entities, a
+            single-row DataFrame.
+        """
+        try:
+            import pandas as pd  # local import — pandas is an optional extra
+        except ImportError as e:
+            raise ImportError(
+                "to_pandas() requires the 'pandas' extra: pip install crease[pandas]"
+            ) from e
+
+        if not allow_partial:
+            self.report.raise_if_invalid()
+
+        value = self._entity_value(entity)
+        if value is None:
+            return pd.DataFrame()
+        if isinstance(value, dict):
+            return pd.DataFrame([value])
+        return pd.DataFrame(value)
+
+
+def _coerce_to_model(record: dict[str, Any], model: Any, *, loc: tuple) -> Any:
+    """Project a single canonical dict into a Pydantic model instance.
+
+    Opportunistic field matching — fields the model doesn't declare are
+    dropped silently; type mismatches surface as `crease.ValidationError`
+    wrapping the underlying Pydantic error with crease-flavoured `loc`.
+    """
+    from pydantic import ValidationError as _PydanticValidationError
+
+    from crease._errors import Error, ValidationError
+
+    try:
+        return model.model_validate(record)
+    except _PydanticValidationError as e:
+        crease_errors: list[Error] = []
+        entity_name = loc[0] if loc else None
+        row_idx = loc[1] if len(loc) > 1 else None
+        for err in e.errors():
+            field_name = ".".join(str(p) for p in err.get("loc", ()))
+            crease_errors.append(
+                Error(
+                    type="model_type_mismatch",
+                    loc=(entity_name, row_idx, field_name or None),
+                    msg=err.get("msg", ""),
+                    input=err.get("input"),
+                    ctx={"pydantic_type": err.get("type", "")},
+                )
+            )
+        raise ValidationError(crease_errors) from e
 
 
 # ---- helpers -------------------------------------------------------------
@@ -589,9 +831,26 @@ def _extract_entity(workbook: Workbook, entity: Entity, template: Template, resu
 
 
 def extract(path: str | Path, template: Template) -> ExtractResult:
-    """Apply a template to a file. Returns canonical JSON + structural errors."""
+    """Apply a template to an xlsx file and return canonical JSON.
+
+    The returned `ExtractResult` carries the canonical data and any
+    structural / row-level extraction problems. It also carries a reference
+    to the template, so projection methods (`to_pydantic`, `to_pandas`,
+    `iter`, `get`) can find it.
+
+    Args:
+        path: Path to the .xlsx file.
+        template: A loaded `crease.Template`.
+
+    Returns:
+        An `ExtractResult` holding the canonical dict and any errors.
+    """
     p = Path(path)
-    result = ExtractResult(template_id=template.template_id, source_file=p.name)
+    result = ExtractResult(
+        template_id=template.template_id,
+        source_file=p.name,
+        template=template,
+    )
     workbook = _open_workbook(p)
     try:
         for entity in template.entities:
@@ -601,23 +860,63 @@ def extract(path: str | Path, template: Template) -> ExtractResult:
     return result
 
 
-def get(path: str | Path, template: Template, entity: str) -> Any:
-    """Extract a single entity. Returns the canonical value for that entity."""
+def get(
+    path: str | Path,
+    template: Template,
+    entity: str,
+    *,
+    model: Any | None = None,
+    allow_partial: bool = False,
+) -> Any:
+    """Extract a single entity in one call. Convenience wrapper over `extract`.
+
+    Args:
+        path: Path to the .xlsx file.
+        template: A loaded `crease.Template`.
+        entity: The entity name (must have ``cardinality: one``).
+        model: Optional Pydantic model to project into.
+        allow_partial: If ``False`` (default), raises
+            ``crease.ValidationError`` when extraction produced errors.
+
+    Returns:
+        A dict (or a `model` instance), or ``None`` if the entity wasn't found.
+    """
     result = extract(path, template)
-    if entity in result.canonical:
-        return result.canonical[entity]
-    plural = _pluralize(entity)
-    return result.canonical.get(plural)
+    return result.get(entity, model=model, allow_partial=allow_partial)
 
 
-def stream(path: str | Path, template: Template, entity: str) -> Iterator[dict[str, Any]]:
-    """Yield records of one entity. For cardinality=many, true streaming over tab(s)."""
-    # For v1, delegate to extract() and iterate. True row-by-row streaming
-    # via openpyxl read_only is a follow-on once the eager path is stable.
-    value = get(path, template, entity)
-    if value is None:
+def stream(
+    path: str | Path,
+    template: Template,
+    *,
+    entity: str,
+    model: Any | None = None,
+    allow_partial: bool = False,
+) -> Iterator[Any]:
+    """Stream records of one entity from an xlsx file.
+
+    For v1, this delegates to `extract` and iterates the materialized
+    result. True row-by-row streaming via openpyxl read-only mode is a
+    follow-on once the eager path is stable.
+
+    Args:
+        path: Path to the .xlsx file.
+        template: A loaded `crease.Template`.
+        entity: The entity to stream.
+        model: Optional Pydantic model to project each record into. When
+            set, yields `model` instances instead of dicts.
+        allow_partial: If ``False`` (default), raises
+            ``crease.ValidationError`` when extraction produced errors.
+
+    Yields:
+        Dicts, or `model` instances if `model` was passed.
+    """
+    result = extract(path, template)
+    spec = result._entity_spec(entity)
+    if spec is not None and spec.cardinality == "one":
+        # Mirror the materialized API: cardinality=one yields once (or not at all).
+        value = result.get(entity, model=model, allow_partial=allow_partial)
+        if value is not None:
+            yield value
         return
-    if isinstance(value, list):
-        yield from value
-    else:
-        yield value
+    yield from result.iter(entity, model=model, allow_partial=allow_partial)
