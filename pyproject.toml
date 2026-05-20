@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "crease"
-version = "0.1.0"
+version = "1.0.0"
 description = "Declarative Excel-to-JSON extraction and validation. Apply a compact YAML template to .xlsx files to produce canonical JSON and structured per-cell validation errors."
 license = "BSD-3-Clause"
 readme = "README.md"

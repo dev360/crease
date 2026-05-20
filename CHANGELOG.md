@@ -1,1 +1,8 @@
-<!-- CHANGELOG is managed by python-semantic-release. Do not edit by hand. -->
+
+## v1.0.0 (2026-05-20)
+
+- docs: add link to docs site at top of README ([`3738ce6`](https://github.com/dev360/crease/commit/3738ce6332c619a881ca2b2a65f14e35a587b3ef))
+- docs(guardrails): tighten PII rule, add brevity + no-duplicity rules ([`453cb67`](https://github.com/dev360/crease/commit/453cb679d3bb705c182d9ddb06a76783000a5b26))
+- docs(guardrails): prohibit real PII in any generated artifact ([`bbd5eeb`](https://github.com/dev360/crease/commit/bbd5eeb62cad2f03bf3eb2305d66f80058ca3270))
+- docs: convert CONVENTIONS.mdx to plain markdown ([`6daf967`](https://github.com/dev360/crease/commit/6daf96757c17e0e62ba59cc771e32ab4d34ebefd))
+- docs: scaffold MkDocs Material site with mkdocstrings ([`f7688f1`](https://github.com/dev360/crease/commit/f7688f1e989893708f0bdb9f023eb14700daeabb))
