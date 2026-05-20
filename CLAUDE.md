@@ -2,6 +2,24 @@
 
 Declarative Excel-to-JSON extraction and validation. A YAML template describes where the data lives and what the fields mean; the same template drives both extraction (cells → canonical JSON) and validation (constraints → structured errors).
 
+## ⚠ No real PII in generated artifacts — ever
+
+**Any** artifact you generate on behalf of this project — test fixtures, code examples, docstring examples, PR descriptions, commit messages, README snippets, doc-site copy, chat responses that include sample data, anything — must use **fictitious** values. No real names, real emails, real phone numbers, real addresses, real company names, real customer identifiers, real account numbers, real domains belonging to actual organisations, real geolocations tied to actual people, or any other data that could identify a real human or organisation.
+
+The test corpus under `test_cases/` is the model: it uses [Faker](https://faker.readthedocs.io/) with a fixed seed so every sample value is plausible-looking but generated, not borrowed from reality. Mirror that philosophy everywhere:
+
+- **Emails** — use `example.com`, `example.org`, `example.net`, `acme.test`, or a Faker-generated `*@example.*` address. Never paste an email from a real inbox, support ticket, or customer file.
+- **Names** — use Faker-style (`John Smith`, `Jane Doe`, `Maria Garcia`) or obvious placeholders (`Operator A`, `Customer 1`). Never a real coworker, customer, or recognisable public figure.
+- **Companies** — use `Acme Corp`, `Globex`, `Initech`, `Hooli`, `Foo Industries`. Never a real customer's company name, even if their template inspired the example.
+- **Phone numbers** — use `555-xxxx` US-style or Faker-generated. Never paste a real number.
+- **Addresses, IDs, account numbers** — Faker-generated or obviously placeholder (`ORD-1001`, `123 Main St`). Never a real address or production identifier.
+- **Domains / URLs** — `example.com`, `localhost`, RFC-2606 reserved names, or invented ones. Never a domain that resolves to a real customer or partner.
+- **Stack traces, log snippets, real-file content** — scrub before quoting. If a user shares real data in conversation to debug something, do not echo it back in any committed artifact (test, doc, PR body, fixture).
+
+If a real-looking value sneaks in (because it came from the user's clipboard, a debug session, a Slack paste), **strip and replace before committing**. When in doubt, generate a fresh fake — Faker, made-up tokens, or RFC-reserved placeholders are always safe choices.
+
+This rule is non-negotiable. Crease will be evaluated against real customer Excel files; the *library* is fine with that, but the *repository* must remain PII-clean so it can be open-sourced, screenshared, screencast, demoed, and audited without exposure.
+
 ## First principles
 
 1. **Documentation first.** Every API change is paired with a `docs/` update in the same PR. A PR without docs is incomplete. The `docs/` directory is the source of truth for what the library does and why. Code examples in docs must be real — if a snippet is shown, it must execute as written.
