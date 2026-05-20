@@ -32,3 +32,31 @@ entities:
 
 See the [Reference > Template](../reference/template.md) page for the full
 schema with every field documented.
+
+## Templates that pin the read backend
+
+Crease reads spreadsheets through two interchangeable backends — calamine
+(the default; reads `.xlsx`, `.xls`, `.xlsb`, `.ods`) and openpyxl (`.xlsx`
+only, but exposes cell metadata calamine does not).
+
+One template feature forces openpyxl: **`locate.skip_hidden_rows: true`**.
+Calamine doesn't surface the row-hidden flag, so a template that needs to
+drop hidden rows is auto-dispatched to openpyxl. The side effect is that
+such templates can't read `.xls` / `.xlsb` / `.ods` — those formats live
+on the calamine path only.
+
+```yaml
+entities:
+  - name: order
+    locate:
+      tab: Orders
+      orientation: flat
+      skip_hidden_rows: true   # → openpyxl backend; .xlsx only
+```
+
+If you'd rather have multi-format support and accept that hidden-row
+detection won't fire, override at call time:
+
+```python
+crease.extract("orders.xls", template, engine="calamine")  # silently no-ops skip_hidden_rows
+```
