@@ -6,7 +6,7 @@ Declarative Excel-to-JSON extraction and validation. A YAML template describes w
 
 ## No real PII in generated artifacts
 
-Every artifact in this repo — tests, code, docs, PR/commit messages, examples — uses **fictitious** values only. No real names, emails, phone numbers, addresses, companies, IDs, or domains. Mirror `test_cases/` (Faker with a fixed seed): use `example.com`, `Acme/Globex/Hooli`, `555-xxxx`, `ORD-1001`. If real data shows up during debug, scrub before committing.
+Every artifact in this repo — tests, code, docs, PR/commit messages, examples — **must use fictitious** values only. No real names, emails, phone numbers, addresses, companies, IDs, or domains. Mirror `test_cases/` (Faker with a fixed seed): use `example.com`, `Acme/Globex/Hooli`, `555-xxxx`, `ORD-1001`. If real data shows up during debug, scrub before committing.
 
 ## No duplicity in edits
 
