@@ -40,16 +40,15 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: "3.12"
 
-      - name: Install Poetry
-        run: pip install poetry==1.8
-
       - name: Install dependencies
-        run: poetry install --with dev
+        run: uv sync --group dev
 
       - name: Release (tag + changelog + GitHub Release)
         id: release
@@ -58,13 +57,13 @@ jobs:
         # Capture the version before and after semantic-release runs. If the
         # commit log since the last tag has no `feat:`/`fix:`/`perf:`/`refactor:`,
         # semantic-release no-ops and the version stays the same — in which
-        # case build + publish below must be skipped, otherwise poetry
-        # rebuilds the existing version and PyPI 400s on "file already exists".
+        # case build + publish below must be skipped, otherwise uv rebuilds
+        # the existing version and PyPI 400s on "file already exists".
         run: |
-          OLD_VERSION=$(poetry version --short)
-          poetry run semantic-release version
-          poetry run semantic-release publish
-          NEW_VERSION=$(poetry version --short)
+          OLD_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          uv run semantic-release version
+          uv run semantic-release publish
+          NEW_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
           echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
@@ -77,10 +76,10 @@ jobs:
 
       - name: Build distribution
         if: steps.release.outputs.released == 'true'
-        run: poetry build
+        run: uv build
 
       - name: Publish to PyPI
         if: steps.release.outputs.released == 'true'
         env:
-          POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
-        run: poetry publish
+          UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
+        run: uv publish
