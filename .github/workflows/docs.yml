@@ -34,18 +34,18 @@ jobs:
     steps:
       - uses: actions/checkout@v6
 
-      - uses: actions/setup-python@v6
+      - name: Install uv
+        uses: astral-sh/setup-uv@v6
         with:
+          enable-cache: true
+          cache-dependency-glob: "uv.lock"
           python-version: "3.12"
 
-      - name: Install Poetry
-        run: pip install poetry==1.8
-
       - name: Install dependencies (with docs extra)
-        run: poetry install --with test --all-extras
+        run: uv sync --all-extras --group test
 
       - name: Build docs (strict)
-        run: poetry run mkdocs build --strict
+        run: uv run mkdocs build --strict
 
       - name: Upload artifact
         if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
