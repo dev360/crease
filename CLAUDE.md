@@ -65,7 +65,7 @@ docs/
     template.md
     errors.md
   cli.md
-  conventions.md             Excel patterns we handle (replaces CONVENTIONS.mdx)
+  conventions.md             Excel patterns we handle (mirrors CONVENTIONS.md at root)
 mkdocs.yml
 ```
 

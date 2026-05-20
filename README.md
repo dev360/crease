@@ -370,7 +370,7 @@ except crease.ValidationError as e:
 
 - [`ROADMAP.md`](ROADMAP.md) — what's in v1, what's deferred
 - [`COVERAGE.md`](COVERAGE.md) — layouts and validation errors supported
-- [`CONVENTIONS.mdx`](CONVENTIONS.mdx) — Excel patterns we handle, with examples
+- [`CONVENTIONS.md`](CONVENTIONS.md) — Excel patterns we handle, with examples
 - [`test_cases/`](test_cases/) — labeled fixtures that double as the spec
 
 ## License
