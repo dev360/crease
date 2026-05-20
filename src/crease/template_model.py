@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import datetime as _dt
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, create_model
 
 # ---- enums ---------------------------------------------------------------
 
@@ -217,8 +218,10 @@ class Template(BaseModel):
         fields are ``T | None`` with default ``None``.
 
         The generated model uses ``extra="ignore"`` so enriched / extra
-        keys don't error, and ``strict=True`` so type mismatches surface
-        loudly rather than being silently coerced.
+        keys don't error. Pydantic's default coercion is permitted (e.g.
+        an ISO-format date string projects into ``datetime.date``) — truly
+        incompatible inputs still raise, which is what callers want from
+        "throw if the type is wrong."
 
         Args:
             entity: Name of the entity (must match `Entity.name`).
@@ -262,10 +265,6 @@ DEFAULT_FALSE_VALUES: list[str] = ["false", "False", "FALSE", "no", "No", "NO", 
 
 # ---- entity-model generation --------------------------------------------
 
-import datetime as _dt  # noqa: E402
-
-from pydantic import ConfigDict as _ConfigDict, create_model  # noqa: E402
-
 _PY_TYPE: dict[str, type] = {
     "string": str,
     "integer": int,
@@ -305,7 +304,7 @@ def _build_entity_model(template: Template, entity_name: str) -> type[BaseModel]
         # strict=False — accept Pydantic's safe coercions (ISO date strings → date,
         # "5" → 5). Truly incompatible types still raise, which is what callers
         # want from "throw if the type is wrong."
-        __config__=_ConfigDict(extra="ignore", strict=False, arbitrary_types_allowed=True),
+        __config__=ConfigDict(extra="ignore", strict=False, arbitrary_types_allowed=True),
         **fields,
     )
     Model.__doc__ = f"Auto-generated from crease template '{template.template_id}', entity '{entity_name}'."

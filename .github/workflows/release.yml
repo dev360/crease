@@ -1,7 +1,23 @@
 name: Release
 
+# Manual trigger only — we do NOT cut a release on every push to main.
+#
+# PyPI publishing is currently DISABLED. When ready to enable:
+#   1. Add a PYPI_TOKEN repository secret (or wire trusted publishing).
+#   2. Set `publish-pypi` input default to `true`, or remove the gate.
+#   3. Optionally add a `release:` trigger so releases happen automatically
+#      on main pushes once you're confident in the corpus tests.
 on:
   workflow_dispatch:
+    inputs:
+      publish-pypi:
+        description: "Also publish the built artifact to PyPI"
+        type: boolean
+        default: false
+      dry-run:
+        description: "Compute the next version without committing or pushing"
+        type: boolean
+        default: true
 
 jobs:
   release:
@@ -23,21 +39,29 @@ jobs:
           python-version: "3.12"
 
       - name: Install Poetry
-        run: |
-          pip install poetry==1.8
-          poetry install --with dev
+        run: pip install poetry==1.8
 
-      - name: Run semantic-release
+      - name: Install dependencies
+        run: poetry install --with dev
+
+      - name: Semantic-release (dry-run)
+        if: ${{ inputs.dry-run }}
+        run: poetry run semantic-release version --noop --print
+
+      - name: Semantic-release (apply version + changelog)
+        if: ${{ !inputs.dry-run }}
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           poetry run semantic-release version
           poetry run semantic-release publish
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build
+      - name: Build distribution
+        if: ${{ !inputs.dry-run }}
         run: poetry build
 
       - name: Publish to PyPI
+        if: ${{ !inputs.dry-run && inputs.publish-pypi }}
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
         run: poetry publish
