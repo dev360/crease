@@ -46,7 +46,9 @@ jobs:
 
       - name: Semantic-release (dry-run)
         if: ${{ inputs.dry-run }}
-        run: poetry run semantic-release version --noop --print
+        # `--print` alone outputs the next version without committing, tagging, or
+        # pushing. The `--noop` flag was removed in python-semantic-release v10.
+        run: poetry run semantic-release version --print
 
       - name: Semantic-release (apply version + changelog)
         if: ${{ !inputs.dry-run }}
