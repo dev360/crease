@@ -297,28 +297,28 @@ you don't pay for pandas. No LLM, no network calls at runtime.
 
 ### Local development
 
-The repo uses [Poetry](https://python-poetry.org/) and the `src/` layout.
+The repo uses [uv](https://docs.astral.sh/uv/) and the `src/` layout.
 
 ```bash
 # 1. Clone
 git clone git@github.com:dev360/crease.git
 cd crease
 
-# 2. Install (core + extras + test deps) into a Poetry-managed venv
-poetry install --with test --all-extras
+# 2. Install (core + extras + test deps) into a uv-managed venv
+uv sync --all-extras --group test
 
 # 3. Run the corpus
-poetry run pytest
+uv run pytest
 
 # 4. Optional: build the docs site locally
-poetry run mkdocs serve     # http://localhost:8000
+uv run mkdocs serve     # http://localhost:8000
 
 # 5. Hook up pre-commit (runs ruff + conventional-commit on every commit)
-poetry run pre-commit install
-poetry run pre-commit run --all-files
+uv run pre-commit install
+uv run pre-commit run --all-files
 ```
 
-If you're not using Poetry, plain `pip` works fine against the venv of
+If you're not using uv, plain `pip` works fine against the venv of
 your choice:
 
 ```bash
