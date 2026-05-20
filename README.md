@@ -4,6 +4,8 @@ Declarative Excel-to-JSON extraction **and** validation. Apply a compact YAML
 template to an `.xlsx` file, get canonical JSON out + structured per-cell
 errors. No spreadsheet-specific code in your pipeline.
 
+📖 **Docs:** [dev360.github.io/crease](https://dev360.github.io/crease/)
+
 ```bash
 pip install crease
 ```
