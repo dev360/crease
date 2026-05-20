@@ -51,15 +51,15 @@ docs = ["mkdocs-material", "mkdocstrings"]
 all = ["pandas", "pandera", "mkdocs-material", "mkdocstrings"]
 
 [tool.poetry.group.test.dependencies]
-pytest = "^8.3"
-pytest-cov = "^5.0"
+pytest = ">=8.3,<10.0"
+pytest-cov = ">=5,<8"
 faker = ">=24.0"
 # pandas needed in tests so we can exercise to_pandas without forcing it on users
 pandas = ">=2.0"
 
 [tool.poetry.group.dev.dependencies]
-python-semantic-release = "^9.8"
-pre-commit = "^3.7"
+python-semantic-release = ">=9.8,<11.0"
+pre-commit = ">=3.7,<5.0"
 ruff = ">=0.6,<0.16"
 
 [tool.poetry.scripts]
