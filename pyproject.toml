@@ -10,7 +10,7 @@ repository = "https://github.com/dev360/crease"
 documentation = "https://github.com/dev360/crease#readme"
 keywords = ["excel", "xlsx", "etl", "extraction", "validation", "schema", "pandas", "pydantic"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 5 - Production/Stable",
     "Programming Language :: Python",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
