@@ -1,28 +1,35 @@
 name: Release
 
-# Manual trigger only — we do NOT cut a release on every push to main.
-#
-# PyPI publishing is currently DISABLED. When ready to enable:
-#   1. Add a PYPI_TOKEN repository secret (or wire trusted publishing).
-#   2. Set `publish-pypi` input default to `true`, or remove the gate.
-#   3. Optionally add a `release:` trigger so releases happen automatically
-#      on main pushes once you're confident in the corpus tests.
+# Auto-release on every push to main, plus manual dispatch as a fallback.
+# semantic-release decides whether the new commits warrant a version bump —
+# if not (e.g. only docs: / chore: commits since the last release), the
+# `version` step is a no-op and nothing publishes.
 on:
+  push:
+    branches: [main]
+    # CHANGELOG.md is written *by* this workflow's semantic-release commit;
+    # excluding it from the trigger isn't strictly needed (the `if:` guard
+    # below already skips that commit) but it keeps the action history tidy.
+    paths-ignore:
+      - CHANGELOG.md
   workflow_dispatch:
-    inputs:
-      publish-pypi:
-        description: "Also publish the built artifact to PyPI"
-        type: boolean
-        default: false
-      dry-run:
-        description: "Compute the next version without committing or pushing"
-        type: boolean
-        default: true
+
+# One release at a time; never cancel in-flight (cancelling a half-tagged
+# release is worse than waiting).
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
     name: Release
     runs-on: ubuntu-latest
+    # Skip the auto-run triggered by semantic-release's own version-bump
+    # commit (the "chore(release): X.Y.Z" commit it pushes back to main).
+    # Without this guard, every release would trigger another release.
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      !startsWith(github.event.head_commit.message, 'chore(release):')
     permissions:
       id-token: write
       contents: write
@@ -44,14 +51,7 @@ jobs:
       - name: Install dependencies
         run: poetry install --with dev
 
-      - name: Semantic-release (dry-run)
-        if: ${{ inputs.dry-run }}
-        # `--print` alone outputs the next version without committing, tagging, or
-        # pushing. The `--noop` flag was removed in python-semantic-release v10.
-        run: poetry run semantic-release version --print
-
-      - name: Semantic-release (apply version + changelog)
-        if: ${{ !inputs.dry-run }}
+      - name: Release (tag + changelog + GitHub Release)
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
@@ -59,11 +59,9 @@ jobs:
           poetry run semantic-release publish
 
       - name: Build distribution
-        if: ${{ !inputs.dry-run }}
         run: poetry build
 
       - name: Publish to PyPI
-        if: ${{ !inputs.dry-run && inputs.publish-pypi }}
         env:
           POETRY_PYPI_TOKEN_PYPI: ${{ secrets.PYPI_TOKEN }}
         run: poetry publish
