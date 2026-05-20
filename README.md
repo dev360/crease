@@ -10,7 +10,7 @@ errors. No spreadsheet-specific code in your pipeline.
 pip install crease
 ```
 
-> **Status: alpha.** API may shift before 1.0. See [ROADMAP.md](ROADMAP.md).
+> **Status: 1.0** — published to PyPI as [`crease`](https://pypi.org/project/crease/). API surface is stable; breaking changes will be marked `feat!:` and bump the major version. See [ROADMAP.md](ROADMAP.md) for what's next.
 
 ---
 
