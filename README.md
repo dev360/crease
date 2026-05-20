@@ -288,11 +288,11 @@ crease test test_cases/
 
 ```bash
 pip install crease                  # core: extract + validate, returns dicts
-pip install crease[pandas]          # adds result.to_pandas() (also pulls Pandera)
+pip install crease[pandas]          # adds result.to_pandas()
 ```
 
-Core deps: openpyxl, pydantic, pyyaml, python-calamine. Pandas and Pandera
-are **optional extras** — if you only use `extract` and `to_pydantic`,
+Core deps: openpyxl, pydantic, pyyaml, python-calamine. Pandas is an
+**optional extra** — if you only use `extract` and `to_pydantic`,
 you don't pay for pandas. No LLM, no network calls at runtime.
 
 ### Local development
