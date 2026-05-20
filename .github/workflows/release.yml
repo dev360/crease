@@ -10,12 +10,12 @@ name: Release
 on:
   workflow_dispatch:
     inputs:
-      publish-pypi:
-        description: "Also publish the built artifact to PyPI"
-        type: boolean
-        default: false
       dry-run:
-        description: "Compute the next version without committing or pushing"
+        description: "Compute the next version without committing, pushing, or publishing"
+        type: boolean
+        default: true
+      publish-pypi:
+        description: "When dry-run is off, also publish the built artifact to PyPI"
         type: boolean
         default: true
 
