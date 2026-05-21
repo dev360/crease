@@ -27,7 +27,7 @@ from crease._locate import (
     parse_cell_range,
     resolve_header_row,
 )
-from crease._workbook import Engine, Sheet, Workbook, open_workbook, select_engine
+from crease._workbook import Engine, Sheet, SourceFileError, Workbook, open_workbook, select_engine
 from crease.template_model import (
     AnnotationRule,
     Block,
@@ -1583,11 +1583,10 @@ def extract(path: str | Path, template: Template, *, engine: Engine | None = Non
             template uses ``locate.skip_hidden_rows``, calamine otherwise.
 
     Returns:
-        An `ExtractResult` holding the canonical dict and any errors.
-
-    Raises:
-        crease.SourceFileError: If the file is missing, corrupt, encrypted,
-            or in a format the chosen backend cannot read.
+        An `ExtractResult` holding the canonical dict and any errors. A
+        file-format failure (missing, corrupt, encrypted) lands in
+        ``result.errors`` as an ``unreadable_source`` structural error
+        rather than raising — symmetric with the other structural codes.
     """
     p = Path(path)
     result = ExtractResult(
@@ -1595,13 +1594,88 @@ def extract(path: str | Path, template: Template, *, engine: Engine | None = Non
         source_file=p.name,
         template=template,
     )
-    workbook = open_workbook(p, select_engine(template, engine))
+    try:
+        workbook = open_workbook(p, select_engine(template, engine))
+    except SourceFileError as e:
+        result.errors.append(
+            ExtractionError(
+                entity=None,
+                reason="unreadable_source",
+                details={"path": str(p), "message": str(e)},
+            )
+        )
+        return result
     try:
         for entity in template.entities:
             _extract_entity(workbook, entity, template, result)
     finally:
         workbook.close()
     return result
+
+
+@dataclass
+class ClassifyVerdict:
+    """Outcome of ``crease.classify``.
+
+    Attributes:
+        fit: Coarse verdict. ``"templatable"`` if the file fits the
+            template well enough that ``extract`` would be worth running;
+            ``"not_templatable"`` when it visibly does not match the
+            template shape.
+        confidence: 0.0–1.0. Higher means more certain the verdict is
+            correct; values near 0 mean "definitely not templatable",
+            values near 1 mean "this file fits the template's shape".
+    """
+
+    fit: str
+    confidence: float
+
+
+def classify(
+    path: str | Path,
+    template: Template,
+    *,
+    engine: Engine | None = None,
+) -> ClassifyVerdict:
+    """Coarse "does this file fit this template" verdict.
+
+    Runs extraction with the given template and returns a
+    ``ClassifyVerdict`` so callers can short-circuit the full
+    extract / validate / project flow when the file plainly doesn't
+    match (wrong layout, missing tab, paper-form file mistaken for a
+    table). No exceptions: bad files become a low-confidence
+    ``"not_templatable"`` verdict, same as a mismatched shape.
+
+    Args:
+        path: Path to the source file.
+        template: A loaded ``crease.Template``.
+        engine: Optional backend override.
+
+    Returns:
+        A ``ClassifyVerdict``.
+    """
+    result = extract(path, template, engine=engine)
+    fatal = {
+        "unreadable_source",
+        "missing_tab",
+        "tab_pattern_no_match",
+        "entity_missing",
+        "header_mapping_failed",
+        "column_count_mismatch",
+    }
+    if any(e.reason in fatal for e in result.errors):
+        return ClassifyVerdict(fit="not_templatable", confidence=0.0)
+    total_records = 0
+    for value in result.canonical.values():
+        if isinstance(value, list):
+            total_records += len(value)
+        elif value:
+            total_records += 1
+    if total_records == 0:
+        return ClassifyVerdict(fit="not_templatable", confidence=0.1)
+    # Every extracted record adds a small constant to confidence, capped
+    # at 1.0. A more accurate fit score belongs in a future iteration.
+    return ClassifyVerdict(fit="templatable", confidence=min(1.0, 0.5 + 0.05 * total_records))
 
 
 def get(

@@ -469,6 +469,7 @@ except crease.ValidationError as e:
 | `header_mapping_failed` | `source_column`/`source_label` not found |
 | `entity_missing` | Locate found nothing |
 | `multiple_rows_for_cardinality_one` | `cardinality: one` entity found >1 row |
+| `unreadable_source` | Source file could not be opened. `extract()` does not raise for this; the failure lands in `report.errors()` so callers can handle it the same way they handle template-mapping failures. |
 
 ---
 

@@ -258,6 +258,7 @@ def _structural_msg(reason: str) -> str:
         "capture_no_match": "Capture's `from` pattern matched zero cells in the block instance",
         "capture_multiple_matches": "Capture's `from` pattern matched multiple cells in the block instance and on_multiple=error",
         "block_ref_not_found": "Entity references a block name that is not declared in the template",
+        "unreadable_source": "Source file could not be opened (missing, corrupt, encrypted, or unsupported format)",
     }.get(reason, f"Structural problem: {reason}")
 
 

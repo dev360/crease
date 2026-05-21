@@ -346,6 +346,34 @@ locate:
   header_row: 0
   min_data_density: 0.5    # warn if <50% of cells across rows are populated
 ```
+
+## Classifying files before extraction
+
+`crease.classify(path, template)` returns a `ClassifyVerdict` so a
+pipeline can short-circuit the full extract / validate / project flow
+when a file plainly doesn't match the template (wrong layout, missing
+tab, a paper-form file mistaken for a table):
+
+```python
+verdict = crease.classify("incoming.xlsx", template)
+if verdict.fit == "not_templatable" or verdict.confidence < 0.3:
+    route_to_human_review(...)
+else:
+    result = crease.extract("incoming.xlsx", template)
+```
+
+The implementation runs `extract` and inspects the structural error
+codes. `classify` itself never raises — file-open failures land as
+`fit="not_templatable", confidence=0.0` rather than as exceptions.
+
+## File-open failures surface in the report
+
+`extract` no longer raises `SourceFileError` for missing / corrupt /
+encrypted / wrong-format files. The failure lands in
+`result.errors()` as a structural `unreadable_source` error and
+`report.has_structural` is `True`. The `SourceFileError` class is
+still exported so existing `except crease.SourceFileError:` clauses
+remain importable, but no API path now raises it.
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

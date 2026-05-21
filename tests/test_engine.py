@@ -318,20 +318,25 @@ def test_select_engine_calamine_without_skip_hidden_rows_is_silent() -> None:
 # ---- error surfacing on backend open failures --------------------------
 
 
-def test_missing_file_raises_source_file_error(tmp_path: Path) -> None:
-    """Open errors should be wrapped with crease.SourceFileError carrying the path."""
+def test_missing_file_surfaces_as_unreadable_source(tmp_path: Path) -> None:
+    """File-open failures land in the report as a structural ``unreadable_source``
+    error rather than raising — symmetric with how other structural problems
+    surface."""
     template = Template.load(CORPUS_ROOT / "flat_simple" / "template.yml")
     missing = tmp_path / "does_not_exist.xlsx"
-    with pytest.raises(crease.SourceFileError) as excinfo:
-        crease.extract(missing, template)
-    assert str(missing) in str(excinfo.value)
+    result = crease.extract(missing, template)
+    structural = [e for e in result.errors if e.reason == "unreadable_source"]
+    assert structural, "expected an unreadable_source error in result.errors"
+    assert str(missing) in structural[0].details.get("path", "")
 
 
 def test_openpyxl_rejects_non_xlsx() -> None:
-    """Forcing engine='openpyxl' on a .xls path should fail with a clear error,
-    not deep inside openpyxl with InvalidFileException."""
+    """Forcing engine='openpyxl' on a .xls path should produce a clear
+    ``unreadable_source`` error in the report, not raise deep inside
+    openpyxl with InvalidFileException."""
     template = Template.load(CORPUS_ROOT / "legacy_xls" / "template.yml")
-    with pytest.raises(crease.SourceFileError) as excinfo:
-        crease.extract(CORPUS_ROOT / "legacy_xls" / "input.xls", template, engine="openpyxl")
-    msg = str(excinfo.value)
+    result = crease.extract(CORPUS_ROOT / "legacy_xls" / "input.xls", template, engine="openpyxl")
+    structural = [e for e in result.errors if e.reason == "unreadable_source"]
+    assert structural, "expected an unreadable_source error in result.errors"
+    msg = structural[0].details.get("message", "")
     assert "openpyxl" in msg and "calamine" in msg
