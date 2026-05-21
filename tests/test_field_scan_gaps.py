@@ -599,11 +599,6 @@ def test_time_type_coerces_free_text_strings(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-4: anchored field returns null indistinguishably for 'label missing' "
-    "and 'label present, value blank'.",
-)
 def test_anchor_label_was_marks_label_presence(tmp_path):
     """Two files: one with the label and a blank value, one with no label
     at all. The proposed contract: ``ctx.label_was: 'present'`` in the
@@ -621,6 +616,7 @@ def test_anchor_label_was_marks_label_presence(tmp_path):
     tmpl_yml = """
         template_id: anchor_label_was
         version: 1
+        description: P1-4 fixture - distinguish label-missing vs value-blank
         entities:
           - name: cover
             cardinality: one
