@@ -26,7 +26,7 @@ from crease._locate import (
     parse_cell_range,
     resolve_header_row,
 )
-from crease._workbook import Sheet, Workbook, open_workbook, select_engine
+from crease._workbook import Engine, Sheet, Workbook, open_workbook, select_engine
 from crease.template_model import (
     DataEnd,
     Enrich,
@@ -313,11 +313,6 @@ def _pluralize(name: str) -> str:
     if name.endswith("y") and not name.endswith(("ay", "ey", "oy", "uy")):
         return name[:-1] + "ies"
     return name + "s"
-
-
-def _open_workbook(path: Path, template: Template, engine: str | None) -> Workbook:
-    chosen = select_engine(template, engine)
-    return open_workbook(path, chosen)
 
 
 def _filename_inject(record: dict[str, Any], template: Template, source_file: str) -> dict[str, Any]:
@@ -816,7 +811,7 @@ def _extract_entity(workbook: Workbook, entity: Entity, template: Template, resu
 # ---- public API ----------------------------------------------------------
 
 
-def extract(path: str | Path, template: Template, *, engine: str | None = None) -> ExtractResult:
+def extract(path: str | Path, template: Template, *, engine: Engine | None = None) -> ExtractResult:
     """Apply a template to a spreadsheet file and return canonical JSON.
 
     The returned `ExtractResult` carries the canonical data and any
@@ -836,6 +831,10 @@ def extract(path: str | Path, template: Template, *, engine: str | None = None) 
 
     Returns:
         An `ExtractResult` holding the canonical dict and any errors.
+
+    Raises:
+        crease.SourceFileError: If the file is missing, corrupt, encrypted,
+            or in a format the chosen backend cannot read.
     """
     p = Path(path)
     result = ExtractResult(
@@ -843,7 +842,7 @@ def extract(path: str | Path, template: Template, *, engine: str | None = None) 
         source_file=p.name,
         template=template,
     )
-    workbook = _open_workbook(p, template, engine)
+    workbook = open_workbook(p, select_engine(template, engine))
     try:
         for entity in template.entities:
             _extract_entity(workbook, entity, template, result)
@@ -859,7 +858,7 @@ def get(
     *,
     model: Any | None = None,
     allow_partial: bool = False,
-    engine: str | None = None,
+    engine: Engine | None = None,
 ) -> Any:
     """Extract a single entity in one call. Convenience wrapper over `extract`.
 
@@ -886,7 +885,7 @@ def stream(
     entity: str,
     model: Any | None = None,
     allow_partial: bool = False,
-    engine: str | None = None,
+    engine: Engine | None = None,
 ) -> Iterator[Any]:
     """Stream records of one entity from a spreadsheet file.
 

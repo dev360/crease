@@ -16,6 +16,7 @@ from typing import Any
 
 from crease._coerce import check_constraints
 from crease._errors import Error, ValidationError
+from crease._workbook import Engine
 from crease.extractor import ExtractResult, extract
 from crease.template_model import Entity, FieldSpec, Template
 
@@ -226,7 +227,7 @@ def check(
     path: str | Path,
     template: Template,
     *,
-    engine: str | None = None,
+    engine: Engine | None = None,
 ) -> tuple[ExtractResult, Report]:
     """Run `extract` + `validate` in one call.
 

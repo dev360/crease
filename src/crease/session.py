@@ -3,8 +3,7 @@
 A session opens a file once, lets you fetch ``cardinality: one`` entities
 eagerly and stream ``cardinality: many`` entities in the same context, and
 exposes the running error report. For v1 the implementation eagerly
-extracts everything on entry; row-by-row streaming via openpyxl's
-read-only mode is a follow-on.
+extracts everything on entry; true row-by-row streaming is a follow-on.
 """
 
 from __future__ import annotations
@@ -13,6 +12,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
+from crease._workbook import Engine
 from crease.extractor import ExtractResult, extract
 from crease.template_model import Template
 from crease.validator import Report, validate
@@ -31,7 +31,7 @@ class Session:
                 log.warning(session.report().errors())
     """
 
-    def __init__(self, path: str | Path, template: Template, *, engine: str | None = None):
+    def __init__(self, path: str | Path, template: Template, *, engine: Engine | None = None):
         self._path = Path(path)
         self._template = template
         self._engine = engine
@@ -79,7 +79,7 @@ def open(  # noqa: A001 - shadowing builtin is intentional
     path: str | Path,
     template: Template,
     *,
-    engine: str | None = None,
+    engine: Engine | None = None,
 ) -> Session:
     """Open a file for multi-entity extraction. Use as a context manager.
 

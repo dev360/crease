@@ -70,7 +70,12 @@ def test_select_engine_routes_skip_hidden_rows_to_openpyxl() -> None:
 def test_select_engine_explicit_override_wins_over_skip_hidden_rows() -> None:
     # Sanity check that the override is honored — the user owns the trade-off
     # (they lose hidden-row detection but get calamine's broader format support).
-    assert select_engine(_template_with_hidden_rows(), "calamine") == "calamine"
+    # A separate test asserts the accompanying UserWarning.
+    import warnings
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        assert select_engine(_template_with_hidden_rows(), "calamine") == "calamine"
 
 
 def test_select_engine_explicit_override_wins_over_default() -> None:
@@ -199,11 +204,15 @@ def test_calamine_cannot_see_hidden_rows(tmp_path: Path) -> None:
     so `skip_hidden_rows` becomes a no-op on that backend. We assert the
     degraded behavior so anyone who changes the adapter notices.
     """
+    import warnings
+
     xlsx = tmp_path / "hidden.xlsx"
     _build_workbook_with_hidden_row(xlsx)
 
     template = _hidden_row_template(skip=True)
-    result = extract(xlsx, template, engine="calamine")
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", UserWarning)
+        result = extract(xlsx, template, engine="calamine")
 
     order_ids = [r["order_id"] for r in result.canonical["orders"]]
     assert "ORD-1003" in order_ids
@@ -243,3 +252,86 @@ def test_check_honors_engine(monkeypatch: pytest.MonkeyPatch) -> None:
     template = Template.load(case_dir / "template.yml")
     crease.check(case_dir / "input.xlsx", template, engine="openpyxl")
     assert seen == ["openpyxl"]
+
+
+def test_get_honors_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+    real = open_workbook
+
+    def spy(path: Path, engine: str):
+        seen.append(engine)
+        return real(path, engine)
+
+    monkeypatch.setattr("crease.extractor.open_workbook", spy)
+
+    case_dir = CORPUS_ROOT / "property_sheet_cover"
+    template = Template.load(case_dir / "template.yml")
+    crease.get(case_dir / "input.xlsx", template, "company", engine="openpyxl")
+    assert seen == ["openpyxl"]
+
+
+def test_stream_honors_engine(monkeypatch: pytest.MonkeyPatch) -> None:
+    seen: list[str] = []
+    real = open_workbook
+
+    def spy(path: Path, engine: str):
+        seen.append(engine)
+        return real(path, engine)
+
+    monkeypatch.setattr("crease.extractor.open_workbook", spy)
+
+    case_dir = CORPUS_ROOT / "flat_simple"
+    template = Template.load(case_dir / "template.yml")
+    list(crease.stream(case_dir / "input.xlsx", template, entity="order", engine="openpyxl"))
+    assert seen == ["openpyxl"]
+
+
+# ---- engine + skip_hidden_rows mismatch surfaces a warning -------------
+
+
+def test_calamine_override_warns_on_skip_hidden_rows() -> None:
+    """Forcing engine='calamine' on a skip_hidden_rows template should not be silent."""
+    import warnings
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        result = select_engine(_template_with_hidden_rows(), "calamine")
+        assert result == "calamine"
+        skip_warnings = [w for w in caught if "skip_hidden_rows" in str(w.message)]
+        assert skip_warnings, (
+            "forcing calamine on a skip_hidden_rows template should emit a "
+            "warning so the user knows the feature was disabled"
+        )
+
+
+def test_select_engine_calamine_without_skip_hidden_rows_is_silent() -> None:
+    """Forcing engine='calamine' on a normal template must NOT warn."""
+    import warnings
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        select_engine(_template_without_hidden_rows(), "calamine")
+        skip_warnings = [w for w in caught if "skip_hidden_rows" in str(w.message)]
+        assert not skip_warnings
+
+
+# ---- error surfacing on backend open failures --------------------------
+
+
+def test_missing_file_raises_source_file_error(tmp_path: Path) -> None:
+    """Open errors should be wrapped with crease.SourceFileError carrying the path."""
+    template = Template.load(CORPUS_ROOT / "flat_simple" / "template.yml")
+    missing = tmp_path / "does_not_exist.xlsx"
+    with pytest.raises(crease.SourceFileError) as excinfo:
+        crease.extract(missing, template)
+    assert str(missing) in str(excinfo.value)
+
+
+def test_openpyxl_rejects_non_xlsx() -> None:
+    """Forcing engine='openpyxl' on a .xls path should fail with a clear error,
+    not deep inside openpyxl with InvalidFileException."""
+    template = Template.load(CORPUS_ROOT / "legacy_xls" / "template.yml")
+    with pytest.raises(crease.SourceFileError) as excinfo:
+        crease.extract(CORPUS_ROOT / "legacy_xls" / "input.xls", template, engine="openpyxl")
+    msg = str(excinfo.value)
+    assert "openpyxl" in msg and "calamine" in msg
