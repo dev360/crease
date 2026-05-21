@@ -1029,11 +1029,6 @@ def test_header_row_indexing_matches_repl_view_with_leading_blanks(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-8: duplicate_policy not yet implemented; cross-tab repetition that "
-    "is intentional always emits duplicate_row errors.",
-)
 def test_duplicate_policy_ignore_suppresses_intentional_repeats(tmp_path):
     """When a workbook intentionally repeats the same record across tabs
     (e.g. a rolling 6-week window where each week's tab carries the same
@@ -1053,6 +1048,7 @@ def test_duplicate_policy_ignore_suppresses_intentional_repeats(tmp_path):
         """
         template_id: duplicate_policy
         version: 1
+        description: P2-8 fixture - duplicate_policy ignore suppresses repeats
         entities:
           - name: placement
             cardinality: many
@@ -1159,11 +1155,6 @@ def test_tab_only_binds_to_single_data_tab_regardless_of_name(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-11: min_data_density warning not yet implemented; when 'extracted N "
-    "records but most are mostly-blank', emit a structured suspicion.",
-)
 def test_min_data_density_warns_when_most_rows_mostly_blank(tmp_path):
     """If the extracted entity has rows where on average <30% of fields
     are populated, emit a ``low_data_density`` warning.
@@ -1184,6 +1175,7 @@ def test_min_data_density_warns_when_most_rows_mostly_blank(tmp_path):
         """
         template_id: min_data_density
         version: 1
+        description: P2-11 fixture - low_data_density warning on sparse rows
         entities:
           - name: row
             cardinality: many

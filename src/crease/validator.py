@@ -198,9 +198,48 @@ def validate(result: ExtractResult, template: Template) -> Report:
                     if not isinstance(rec, dict):
                         continue
                     _check_record(rec, entity, row_idx=i, errors=errors)
-                _check_duplicates(data, entity, errors)
+                if entity.locate.duplicate_policy == "error":
+                    _check_duplicates(data, entity, errors)
+                _check_data_density(data, entity, errors)
 
     return Report(errors_list=errors)
+
+
+def _check_data_density(
+    records: list[dict[str, Any]],
+    entity: Entity,
+    errors: list[Error],
+) -> None:
+    threshold = entity.locate.min_data_density
+    if threshold is None or not records:
+        return
+    keys = [f.name for f in entity.fields]
+    if not keys:
+        return
+    populated = 0
+    for rec in records:
+        if not isinstance(rec, dict):
+            continue
+        for k in keys:
+            v = rec.get(k)
+            if v is None:
+                continue
+            if isinstance(v, str) and v.strip() == "":
+                continue
+            populated += 1
+    total = len(records) * len(keys)
+    if total == 0:
+        return
+    density = populated / total
+    if density < threshold:
+        errors.append(
+            Error(
+                type="low_data_density",
+                loc=(entity.name, None, None),
+                msg=(f"Entity {entity.name!r} has data density {density:.2f}, " f"below threshold {threshold:.2f}"),
+                ctx={"density": density, "threshold": threshold},
+            )
+        )
 
 
 def _structural_msg(reason: str) -> str:
