@@ -63,7 +63,14 @@ jobs:
           set -euo pipefail
           OLD_VERSION=$(uv version --short)
           [ -n "$OLD_VERSION" ] || { echo "::error::OLD_VERSION is empty — failed to read project version"; exit 1; }
-          uv run semantic-release version
+          # --no-vcs-release: python-semantic-release v10 tries to enumerate
+          # built dists as GitHub Release assets, and crashes with
+          # `list object has no element 0` when the list is empty (it is —
+          # `uv build` runs in a later step). The legacy
+          # `[tool.semantic_release.publish] upload_to_vcs_release = false`
+          # is silently ignored in v10. We still get the tag pushed; we just
+          # don't get a GitHub Release UI page for the version.
+          uv run semantic-release version --no-vcs-release
           NEW_VERSION=$(uv version --short)
           [ -n "$NEW_VERSION" ] || { echo "::error::NEW_VERSION is empty — failed to read project version"; exit 1; }
           echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
