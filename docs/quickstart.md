@@ -58,6 +58,11 @@ result.canonical["orders"][0]
 
 `result.canonical` is a plain dict. No pandas or pydantic imported yet.
 
+The same call works on `.xls`, `.xlsb`, and `.ods` files — calamine handles
+them transparently. Force a specific backend with `engine="calamine"` or
+`engine="openpyxl"` if you need to (see the
+[home page](index.md#read-backends) for the auto-selection rules).
+
 ## 4. Validate
 
 ```python

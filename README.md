@@ -1,8 +1,9 @@
 # crease
 
 Declarative Excel-to-JSON extraction **and** validation. Apply a compact YAML
-template to an `.xlsx` file, get canonical JSON out + structured per-cell
-errors. No spreadsheet-specific code in your pipeline.
+template to a spreadsheet file — `.xlsx`, `.xls`, `.xlsb`, or `.ods` — get
+canonical JSON out plus structured per-cell errors. No spreadsheet-specific
+code in your pipeline.
 
 📖 **Docs:** [dev360.github.io/crease](https://dev360.github.io/crease/)
 
@@ -29,6 +30,7 @@ silent:
 | `N/A`, `TBD`, `-` in cells trigger `wrong_type` everywhere | False positives bury real issues | Layered `null_tokens` — library defaults handle the common ones, templates and fields tighten or loosen |
 | Headers move down a row when the customer adds a title line | Every subsequent file fails | `locate.header_anchor: "Order ID"` instead of `header_row: 3` |
 | Operator hides "soft-deleted" rows; downstream consumers still process them | Cf. Lehman/Barclays' 179 unwanted trading contracts (2008) | `locate.skip_hidden_rows: true` |
+| Customer sends `.xls` / `.xlsb` / `.ods` instead of `.xlsx` | Pipeline rejects the file; manual re-export | All four formats read out of the box — calamine handles the legacy ones |
 
 The full catalog of patterns and supporting sources lives in
 [ANECDOTES.md](ANECDOTES.md). The design philosophy: **fail loudly with row
@@ -291,9 +293,25 @@ pip install crease                  # core: extract + validate, returns dicts
 pip install crease[pandas]          # adds result.to_pandas()
 ```
 
-Core deps: openpyxl, pydantic, pyyaml, python-calamine. Pandas is an
+Core deps: python-calamine, openpyxl, pydantic, pyyaml. Pandas is an
 **optional extra** — if you only use `extract` and `to_pydantic`,
 you don't pay for pandas. No LLM, no network calls at runtime.
+
+### Read backends
+
+Crease reads spreadsheets through two interchangeable backends:
+
+| Backend | Formats | When it's used |
+|---|---|---|
+| **calamine** (default) | `.xlsx`, `.xls`, `.xlsb`, `.ods` | Picked automatically. Fast (Rust under the hood) and GIL-releasing, so a `ThreadPoolExecutor` parallelizes multi-file reads. |
+| **openpyxl** | `.xlsx` only | Picked automatically when the template declares `locate.skip_hidden_rows: true` — only openpyxl exposes row-hidden cell metadata. |
+
+Override the auto-selection with `engine="calamine"` or `engine="openpyxl"`
+on `extract`, `get`, `stream`, `check`, and `crease.open`. Forcing calamine
+on a `skip_hidden_rows` template emits a `UserWarning` and silently
+degrades that feature to a no-op (calamine can't see the flag); use this
+only when you're reading a non-xlsx file and have already verified hidden
+rows aren't present.
 
 ### Local development
 

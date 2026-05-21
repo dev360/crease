@@ -16,6 +16,7 @@ from typing import Any
 
 from crease._coerce import check_constraints
 from crease._errors import Error, ValidationError
+from crease._workbook import Engine
 from crease.extractor import ExtractResult, extract
 from crease.template_model import Entity, FieldSpec, Template
 
@@ -222,15 +223,25 @@ def _row_msg(reason: str, field: str | None, expected: str | None) -> str:
     return f"Field '{field}': {reason}"
 
 
-def check(path: str | Path, template: Template) -> tuple[ExtractResult, Report]:
+def check(
+    path: str | Path,
+    template: Template,
+    *,
+    engine: Engine | None = None,
+) -> tuple[ExtractResult, Report]:
     """Run `extract` + `validate` in one call.
+
+    Args:
+        path: Path to the source file.
+        template: A loaded `crease.Template`.
+        engine: See `crease.extract`.
 
     Returns:
         A tuple ``(result, report)``. `result` always carries a populated
         canonical dict (even when there are errors — partial extraction is
         the whole point); `report` carries the full error list.
     """
-    result = extract(path, template)
+    result = extract(path, template, engine=engine)
     report = validate(result, template)
     # Cache the report on the result so projection methods can consult it.
     result._cached_report = report

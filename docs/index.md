@@ -1,17 +1,20 @@
 # crease
 
 Declarative Excel-to-JSON extraction **and** validation. Apply a compact
-YAML template to an `.xlsx` file, get canonical JSON out plus structured
-per-cell errors. No spreadsheet-specific code in your pipeline.
+YAML template to a spreadsheet — `.xlsx`, `.xls`, `.xlsb`, or `.ods` — get
+canonical JSON out plus structured per-cell errors. No spreadsheet-specific
+code in your pipeline.
 
 ```bash
 pip install crease
 ```
 
-!!! warning "Status: alpha"
-    The API may shift before 1.0. The [Why crease](why.md) page documents
-    the failure modes the library exists to solve — those are stable
-    commitments. The names of methods may still change.
+!!! note "Multi-format reads, single API"
+    Calamine is the default read backend, so the same `extract()` call
+    works on `.xlsx`, `.xls`, `.xlsb`, and `.ods`. Openpyxl is kept as a
+    fallback for templates that need `locate.skip_hidden_rows` — picked
+    automatically. See [Read backends](#read-backends) for the auto-selection
+    rules.
 
 ## The 30-second pitch
 
@@ -63,6 +66,24 @@ for o  in result.iter("order"):
 4. **Templates are the spec.** A template is the *only* thing that
    changes when a new vendor sends you a slightly different file. The
    pipeline code that consumes the canonical output stays the same.
+
+## Read backends
+
+Reads go through one of two interchangeable backends. Auto-selection
+covers the common case; the `engine=` kwarg is the manual escape hatch.
+
+| Backend | Formats | When it's used |
+|---|---|---|
+| **calamine** (default) | `.xlsx`, `.xls`, `.xlsb`, `.ods` | Picked automatically. Faster (Rust) and GIL-releasing, so multi-file workloads parallelize with a thread pool. |
+| **openpyxl** | `.xlsx` only | Picked automatically when a template declares `locate.skip_hidden_rows: true` — only openpyxl exposes the row-hidden flag. |
+
+```python
+# default — calamine auto-selected unless the template needs hidden-row metadata
+crease.extract("orders.xls", template)
+
+# force the backend; same kwarg on extract / get / stream / check / open
+crease.extract("orders.xlsx", template, engine="openpyxl")
+```
 
 ## Where to go next
 
