@@ -688,10 +688,6 @@ def test_anchor_label_was_marks_label_presence(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-5: Locate.cell_range exists in the model but the extractor doesn't " "appear to gate rows/cols by it.",
-)
 def test_cell_range_restricts_extraction_to_subrectangle(tmp_path):
     """One tab carries two unrelated tables in disjoint column ranges (cols
     A-B and cols D-E). Two entities with disjoint ``cell_range`` should each
@@ -710,6 +706,7 @@ def test_cell_range_restricts_extraction_to_subrectangle(tmp_path):
         """
         template_id: cell_range_side_by_side
         version: 1
+        description: P1-5 fixture - side-by-side tables via cell_range
         entities:
           - name: left_table
             cardinality: many
