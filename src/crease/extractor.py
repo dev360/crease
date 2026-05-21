@@ -33,6 +33,7 @@ from crease.template_model import (
     DataEnd,
     Enrich,
     Entity,
+    LocateSkipRule,
     SkipRowRule,
     Template,
 )
@@ -416,6 +417,85 @@ def _apply_data_end(rows: list[list[Any]], header_idx: int, data_end: DataEnd | 
     return rows
 
 
+@dataclass
+class _ResolvedSkipRule:
+    """Skip rule with referenced column names resolved to column indices."""
+
+    all_blank_cols: list[int]
+    non_blank_cols: list[int]
+    column: int | None
+    pattern: re.Pattern[str] | None
+
+
+def _resolve_skip_row_if(rules: list[LocateSkipRule], headers: list[str]) -> list[_ResolvedSkipRule]:
+    resolved: list[_ResolvedSkipRule] = []
+    for rule in rules:
+        all_blank_cols: list[int] = []
+        if rule.all_blank:
+            for col_name in rule.all_blank:
+                wanted = normalize_header(col_name)
+                if wanted in headers:
+                    all_blank_cols.append(headers.index(wanted))
+        non_blank_cols: list[int] = []
+        if rule.non_blank:
+            for col_name in rule.non_blank:
+                wanted = normalize_header(col_name)
+                if wanted in headers:
+                    non_blank_cols.append(headers.index(wanted))
+        col_idx: int | None = None
+        pat: re.Pattern[str] | None = None
+        if rule.column and rule.value_pattern:
+            wanted = normalize_header(rule.column)
+            if wanted in headers:
+                col_idx = headers.index(wanted)
+                pat = re.compile(rule.value_pattern)
+        resolved.append(
+            _ResolvedSkipRule(
+                all_blank_cols=all_blank_cols,
+                non_blank_cols=non_blank_cols,
+                column=col_idx,
+                pattern=pat,
+            )
+        )
+    return resolved
+
+
+def _is_blank(value: Any) -> bool:
+    if value is None:
+        return True
+    if isinstance(value, str) and value.strip() == "":
+        return True
+    return False
+
+
+def _row_matches_locate_skip(row: list[Any], rules: list[_ResolvedSkipRule]) -> bool:
+    for rule in rules:
+        if not _locate_skip_rule_applies(row, rule):
+            continue
+        return True
+    return False
+
+
+def _locate_skip_rule_applies(row: list[Any], rule: _ResolvedSkipRule) -> bool:
+    matched_any = False
+    for col in rule.all_blank_cols:
+        if col >= len(row) or not _is_blank(row[col]):
+            return False
+        matched_any = True
+    for col in rule.non_blank_cols:
+        if col >= len(row) or _is_blank(row[col]):
+            return False
+        matched_any = True
+    if rule.column is not None and rule.pattern is not None:
+        if rule.column >= len(row):
+            return False
+        raw = row[rule.column]
+        if raw is None or not rule.pattern.fullmatch(str(raw)):
+            return False
+        matched_any = True
+    return matched_any
+
+
 def _extract_flat(
     ws: Sheet,
     entity: Entity,
@@ -570,12 +650,16 @@ def _extract_flat(
             )
         )
 
+    skip_rules = _resolve_skip_row_if(entity.locate.skip_row_if, headers)
+
     extracted: list[dict[str, Any]] = []
     null_token_cache = {f.name: resolve_null_tokens(f, template) for f in entity.fields}
 
     for r_idx, row in enumerate(data_rows):
         if all(v is None for v in row):
             continue  # skip fully blank rows mid-data; validator may flag
+        if _row_matches_locate_skip(row, skip_rules):
+            continue
 
         record: dict[str, Any] = {}
         for f in entity.fields:
