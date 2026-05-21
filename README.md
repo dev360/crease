@@ -307,10 +307,11 @@ Crease reads spreadsheets through two interchangeable backends:
 | **openpyxl** | `.xlsx` only | Picked automatically when the template declares `locate.skip_hidden_rows: true` — only openpyxl exposes row-hidden cell metadata. |
 
 Override the auto-selection with `engine="calamine"` or `engine="openpyxl"`
-on `extract`, `check`, `stream`, and `crease.open`. Forcing calamine on a
-`skip_hidden_rows` template silently degrades that feature to a no-op
-(calamine can't see the flag); use this only when you're reading a non-xlsx
-file and have already verified hidden rows aren't present.
+on `extract`, `get`, `stream`, `check`, and `crease.open`. Forcing calamine
+on a `skip_hidden_rows` template emits a `UserWarning` and silently
+degrades that feature to a no-op (calamine can't see the flag); use this
+only when you're reading a non-xlsx file and have already verified hidden
+rows aren't present.
 
 ### Local development
 

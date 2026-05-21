@@ -81,7 +81,7 @@ covers the common case; the `engine=` kwarg is the manual escape hatch.
 # default — calamine auto-selected unless the template needs hidden-row metadata
 crease.extract("orders.xls", template)
 
-# force the backend; same kwarg on extract / check / stream / open
+# force the backend; same kwarg on extract / get / stream / check / open
 crease.extract("orders.xlsx", template, engine="openpyxl")
 ```
 

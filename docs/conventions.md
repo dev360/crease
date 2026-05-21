@@ -390,6 +390,28 @@ For "print-friendly" reports, headers repeat every N rows.
 > opened in Excel (cache is stale), the cell may come back as `None` or
 > the formula string — emit `extraction_failed` with a message suggesting
 > they open + save the file in Excel.
+>
+> **Backend divergence.** `python-calamine` (the default backend) does not
+> expose a cached-value mode and returns an empty string for formula cells
+> that haven't been pre-evaluated; crease normalizes those to `None`. If a
+> file relies on Excel-computed formula values, pass `engine="openpyxl"`
+> so crease can read the cached results, or open + save the file in Excel
+> before extracting.
+
+---
+
+## 19a. Excel error cells (`#REF!`, `#N/A`, `#DIV/0!`)
+
+A formula that didn't resolve produces a visible error code in the cell.
+
+> **How crease handles it.** Both backends surface error cells as `None`
+> rather than the literal error text. `python-calamine` does not expose
+> the cell error type at all in its Python API; openpyxl with
+> ``data_only=True`` also returns `None` for these. The downstream
+> coercion layer therefore reports the field as missing rather than
+> mistyped. If you need to distinguish "formula broke" from "operator
+> left blank", treat any unexpected `None` in a numeric column as a
+> signal to inspect the source workbook.
 
 ---
 

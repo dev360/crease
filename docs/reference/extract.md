@@ -1,6 +1,6 @@
 # Extraction
 
-Apply a template to an xlsx file and get canonical JSON out.
+Apply a template to a spreadsheet file and get canonical JSON out.
 
 ## ::: crease.extract
 

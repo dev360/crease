@@ -43,17 +43,22 @@ def test_extraction(case_dir: Path, engine: str) -> None:
         )
 
 
+@pytest.mark.parametrize("engine", ["calamine", "openpyxl"])
 @pytest.mark.parametrize("case_dir", _case_dirs(), ids=lambda p: p.name)
-def test_validation(case_dir: Path) -> None:
+def test_validation(case_dir: Path, engine: str) -> None:
     """Report's is_valid + error set match the labeled expected_issues.json.
 
     The corpus's expected_issues.json still uses the legacy `verdict` /
     `issues` keys. The test translates: ``verdict == "valid"`` → expect
     ``report.is_valid``; non-valid verdicts → expect at least the listed
     errors (matched by (entity, field, type) — rows can shift ±1).
+
+    Parametrized on engine so backend divergence in error-set production
+    (e.g. one engine emits a code the other doesn't on the same fixture)
+    surfaces as a CI failure rather than rotting silently.
     """
     template = Template.load(case_dir / "template.yml")
-    result = extract(case_dir / "input.xlsx", template)
+    result = extract(case_dir / "input.xlsx", template, engine=engine)
     report = validate(result, template)
     expected = json.loads((case_dir / "expected_issues.json").read_text())
 
