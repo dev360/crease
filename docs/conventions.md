@@ -295,9 +295,13 @@ Same column, three operators, three different headers.
 Operator A: title case. Operator B: snake_case. Operator C: title case
 with a trailing space and a non-breaking space between words.
 
-> **How crease handles it.** The extractor normalises headers (trim,
-> NBSP→space, lower-case) before matching `source_column`. The template's
-> `source_column: "Order ID"` matches all three.
+> **How crease handles it.** The extractor normalises headers
+> (NBSP→space, collapse internal whitespace runs, trim, lower-case)
+> before matching `source_column`. The template's `source_column: "Order
+> ID"` matches all three — and also matches headers that wrap mid-label
+> (`"Order \nID"`, common when an operator widens a column after Excel
+> auto-wrapped the text) or contain a stray double-space typo
+> (`"Order  ID"`).
 
 ---
 
