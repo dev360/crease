@@ -1,4 +1,7 @@
 
+## v1.1.1 (2026-05-21)
+
+
 ## v1.1.0 (2026-05-21)
 
 - docs: announce multi-format reads and the engine= kwarg ([`cf67c25`](https://github.com/dev360/crease/commit/cf67c25251b587c23a686487e72044cf4ede35de))
