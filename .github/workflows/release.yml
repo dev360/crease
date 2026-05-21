@@ -64,7 +64,6 @@ jobs:
           OLD_VERSION=$(uv version --short)
           [ -n "$OLD_VERSION" ] || { echo "::error::OLD_VERSION is empty — failed to read project version"; exit 1; }
           uv run semantic-release version
-          uv run semantic-release publish
           NEW_VERSION=$(uv version --short)
           [ -n "$NEW_VERSION" ] || { echo "::error::NEW_VERSION is empty — failed to read project version"; exit 1; }
           echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
