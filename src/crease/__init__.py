@@ -25,11 +25,13 @@ Methods on Report:
 
 Exceptions:
     crease.ValidationError                      # raised by halt-by-default projections
+    crease.SourceFileError                      # backend could not open the input file
 """
 
 from __future__ import annotations
 
 from crease._errors import Error, ValidationError
+from crease._workbook import SourceFileError
 from crease.extractor import ExtractResult, extract, get, stream
 from crease.session import Session, open
 from crease.template_model import (
@@ -65,6 +67,7 @@ __all__ = [
     "Report",
     "Error",
     "ValidationError",
+    "SourceFileError",
     "validate",
     "check",
     # session

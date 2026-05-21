@@ -9,10 +9,6 @@ from dataclasses import field as _dc_field
 from pathlib import Path
 from typing import Any
 
-import openpyxl
-from openpyxl.workbook import Workbook
-from openpyxl.worksheet.worksheet import Worksheet
-
 from crease._coerce import (
     CoercionError,
     coerce,
@@ -30,6 +26,7 @@ from crease._locate import (
     parse_cell_range,
     resolve_header_row,
 )
+from crease._workbook import Engine, Sheet, Workbook, open_workbook, select_engine
 from crease.template_model import (
     DataEnd,
     Enrich,
@@ -318,10 +315,6 @@ def _pluralize(name: str) -> str:
     return name + "s"
 
 
-def _open_workbook(path: Path) -> Workbook:
-    return openpyxl.load_workbook(path, data_only=True, read_only=False)
-
-
 def _filename_inject(record: dict[str, Any], template: Template, source_file: str) -> dict[str, Any]:
     if not template.filename_pattern or not template.filename_capture:
         return record
@@ -363,8 +356,8 @@ def _apply_enrich(record: dict[str, Any], enrich_list: list[Enrich], tab: TabMat
 # ---- flat orientation ----------------------------------------------------
 
 
-def _read_flat_grid(ws: Worksheet, locate, cell_range: CellRange | None) -> list[list[Any]]:
-    """Pull rows into a 2D list. openpyxl read; pandas not used yet (kept simple)."""
+def _read_flat_grid(ws: Sheet, locate, cell_range: CellRange | None) -> list[list[Any]]:
+    """Pull rows into a 2D list."""
     grid: list[list[Any]] = []
     hidden = hidden_row_indices(ws) if locate.skip_hidden_rows else set()
 
@@ -373,14 +366,8 @@ def _read_flat_grid(ws: Worksheet, locate, cell_range: CellRange | None) -> list
     min_col = (cell_range.start_col + 1) if cell_range else 1
     max_col = (cell_range.end_col + 1) if (cell_range and cell_range.end_col is not None) else None
 
-    iter_kwargs: dict[str, Any] = {"values_only": True, "min_row": min_row, "min_col": min_col}
-    if max_row is not None:
-        iter_kwargs["max_row"] = max_row
-    if max_col is not None:
-        iter_kwargs["max_col"] = max_col
-
     base = min_row - 1
-    for offset, row in enumerate(ws.iter_rows(**iter_kwargs)):
+    for offset, row in enumerate(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col)):
         if (base + offset) in hidden:
             continue
         grid.append(list(row))
@@ -427,7 +414,7 @@ def _apply_data_end(rows: list[list[Any]], header_idx: int, data_end: DataEnd | 
 
 
 def _extract_flat(
-    ws: Worksheet,
+    ws: Sheet,
     entity: Entity,
     tab: TabMatch,
     template: Template,
@@ -538,7 +525,7 @@ def _extract_flat(
 
 
 def _extract_property_sheet(
-    ws: Worksheet,
+    ws: Sheet,
     entity: Entity,
     tab: TabMatch,
     template: Template,
@@ -560,11 +547,7 @@ def _extract_property_sheet(
     label_to_value: dict[str, Any] = {}
     end_row = (cell_range.end_row + 1) if (cell_range and cell_range.end_row is not None) else None
 
-    iter_kwargs: dict[str, Any] = {"values_only": True, "min_row": start_row + 1}
-    if end_row is not None:
-        iter_kwargs["max_row"] = end_row
-
-    for row in ws.iter_rows(**iter_kwargs):
+    for row in ws.iter_rows(min_row=start_row + 1, max_row=end_row):
         if label_col >= len(row):
             continue
         label = row[label_col]
@@ -621,7 +604,7 @@ def _extract_property_sheet(
 
 
 def _extract_anchored(
-    ws: Worksheet,
+    ws: Sheet,
     entity: Entity,
     tab: TabMatch,
     template: Template,
@@ -629,7 +612,7 @@ def _extract_anchored(
 ) -> dict[str, Any]:
     """Locate each field independently via its `anchor` spec."""
     grid: list[list[Any]] = []
-    for row in ws.iter_rows(values_only=True):
+    for row in ws.iter_rows():
         grid.append(list(row))
 
     record: dict[str, Any] = {}
@@ -748,7 +731,7 @@ def _apply_unpivot(records: list[dict[str, Any]], entity: Entity) -> list[dict[s
 # ---- entity dispatch -----------------------------------------------------
 
 
-def _extract_entity(workbook: Workbook, entity: Entity, template: Template, result: ExtractResult) -> None:
+def _extract_entity(workbook: Workbook, entity: Entity, template: Template, result: ExtractResult) -> None:  # noqa: E501
     tabs = find_tabs(workbook, entity.locate, template.ignore_tabs)
     if not tabs:
         result.errors.append(
@@ -826,8 +809,8 @@ def _extract_entity(workbook: Workbook, entity: Entity, template: Template, resu
 # ---- public API ----------------------------------------------------------
 
 
-def extract(path: str | Path, template: Template) -> ExtractResult:
-    """Apply a template to an xlsx file and return canonical JSON.
+def extract(path: str | Path, template: Template, *, engine: Engine | None = None) -> ExtractResult:
+    """Apply a template to a spreadsheet file and return canonical JSON.
 
     The returned `ExtractResult` carries the canonical data and any
     structural / row-level extraction problems. It also carries a reference
@@ -835,11 +818,21 @@ def extract(path: str | Path, template: Template) -> ExtractResult:
     `iter`, `get`) can find it.
 
     Args:
-        path: Path to the .xlsx file.
+        path: Path to the source file. Calamine (the default backend)
+            reads ``.xls``, ``.xlsx``, ``.xlsb``, and ``.ods``; openpyxl
+            (the fallback for templates that need cell-hidden metadata)
+            reads ``.xlsx`` only.
         template: A loaded `crease.Template`.
+        engine: ``"calamine"`` or ``"openpyxl"`` to force a specific
+            backend. Default (``None``) auto-selects: openpyxl if the
+            template uses ``locate.skip_hidden_rows``, calamine otherwise.
 
     Returns:
         An `ExtractResult` holding the canonical dict and any errors.
+
+    Raises:
+        crease.SourceFileError: If the file is missing, corrupt, encrypted,
+            or in a format the chosen backend cannot read.
     """
     p = Path(path)
     result = ExtractResult(
@@ -847,7 +840,7 @@ def extract(path: str | Path, template: Template) -> ExtractResult:
         source_file=p.name,
         template=template,
     )
-    workbook = _open_workbook(p)
+    workbook = open_workbook(p, select_engine(template, engine))
     try:
         for entity in template.entities:
             _extract_entity(workbook, entity, template, result)
@@ -863,21 +856,23 @@ def get(
     *,
     model: Any | None = None,
     allow_partial: bool = False,
+    engine: Engine | None = None,
 ) -> Any:
     """Extract a single entity in one call. Convenience wrapper over `extract`.
 
     Args:
-        path: Path to the .xlsx file.
+        path: Path to the source file.
         template: A loaded `crease.Template`.
         entity: The entity name (must have ``cardinality: one``).
         model: Optional Pydantic model to project into.
         allow_partial: If ``False`` (default), raises
             ``crease.ValidationError`` when extraction produced errors.
+        engine: See `extract`.
 
     Returns:
         A dict (or a `model` instance), or ``None`` if the entity wasn't found.
     """
-    result = extract(path, template)
+    result = extract(path, template, engine=engine)
     return result.get(entity, model=model, allow_partial=allow_partial)
 
 
@@ -888,26 +883,27 @@ def stream(
     entity: str,
     model: Any | None = None,
     allow_partial: bool = False,
+    engine: Engine | None = None,
 ) -> Iterator[Any]:
-    """Stream records of one entity from an xlsx file.
+    """Stream records of one entity from a spreadsheet file.
 
     For v1, this delegates to `extract` and iterates the materialized
-    result. True row-by-row streaming via openpyxl read-only mode is a
-    follow-on once the eager path is stable.
+    result.
 
     Args:
-        path: Path to the .xlsx file.
+        path: Path to the source file.
         template: A loaded `crease.Template`.
         entity: The entity to stream.
         model: Optional Pydantic model to project each record into. When
             set, yields `model` instances instead of dicts.
         allow_partial: If ``False`` (default), raises
             ``crease.ValidationError`` when extraction produced errors.
+        engine: See `extract`.
 
     Yields:
         Dicts, or `model` instances if `model` was passed.
     """
-    result = extract(path, template)
+    result = extract(path, template, engine=engine)
     spec = result._entity_spec(entity)
     if spec is not None and spec.cardinality == "one":
         # Mirror the materialized API: cardinality=one yields once (or not at all).
