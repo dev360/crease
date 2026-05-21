@@ -23,10 +23,15 @@ _NBSP = " "
 
 
 def normalize_header(s: Any) -> str:
-    """Header normalization is always-on. Trim, drop NBSP, lower-case."""
+    """Header normalization is always-on. Drop NBSP, collapse internal
+    whitespace (including newlines from Excel line-wraps), trim, lower-case.
+    """
     if s is None:
         return ""
-    return str(s).replace(_NBSP, " ").strip().lower()
+    # Collapse runs of any whitespace to a single space so a header cell that
+    # wraps mid-label (``"Total \nEggs"``) or has a stray double-space typo
+    # matches the canonical ``source_column`` spelling.
+    return re.sub(r"\s+", " ", str(s).replace(_NBSP, " ")).strip().lower()
 
 
 def normalize_value(value: Any, mode: Normalize) -> Any:

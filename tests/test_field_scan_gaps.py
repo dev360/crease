@@ -304,11 +304,6 @@ def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P0-4: normalize_header doesn't collapse internal whitespace/newlines; "
-    "'Total \\nEggs' and 'Total Eggs' should both match source_column: 'Total Eggs'.",
-)
 def test_header_normalization_collapses_newlines(tmp_path):
     """A header cell with an Excel line-wrap (``"Total \\nEggs"``) should
     match ``source_column: "Total Eggs"`` after normalization.
@@ -325,6 +320,7 @@ def test_header_normalization_collapses_newlines(tmp_path):
         """
         template_id: header_normalize_newlines
         version: 1
+        description: P0-4 fixture - header with embedded newline
         entities:
           - name: row
             cardinality: many
@@ -342,11 +338,6 @@ def test_header_normalization_collapses_newlines(tmp_path):
     assert result.canonical["rows"][0]["total_eggs"] == 42
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P0-4: normalize_header doesn't collapse runs of internal whitespace; "
-    "'House  No' (two spaces) should match 'House No' (one space).",
-)
 def test_header_normalization_collapses_double_spaces(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
@@ -359,6 +350,7 @@ def test_header_normalization_collapses_double_spaces(tmp_path):
         """
         template_id: header_normalize_double_space
         version: 1
+        description: P0-4 fixture - header with double space
         entities:
           - name: row
             cardinality: many
