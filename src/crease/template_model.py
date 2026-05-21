@@ -51,6 +51,8 @@ class Anchor(BaseModel):
     match_mode: MatchMode = "contains"
     value_at: Direction = "right"
     offset: int = 1
+    column: int | None = None  # restrict label search to a single column; None = any column
+    nth: int = 1  # 1-indexed match to return when the label appears more than once
 
 
 class DataEnd(BaseModel):
