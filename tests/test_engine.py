@@ -20,8 +20,8 @@ import pytest
 import crease
 from crease import Template, extract
 from crease._workbook import open_workbook, select_engine
-from crease.template_model import Entity, Locate, Template as TemplateModel
-
+from crease.template_model import Entity, Locate
+from crease.template_model import Template as TemplateModel
 
 CORPUS_ROOT = Path(__file__).parent.parent / "test_cases"
 

@@ -367,9 +367,7 @@ def _read_flat_grid(ws: Sheet, locate, cell_range: CellRange | None) -> list[lis
     max_col = (cell_range.end_col + 1) if (cell_range and cell_range.end_col is not None) else None
 
     base = min_row - 1
-    for offset, row in enumerate(
-        ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col)
-    ):
+    for offset, row in enumerate(ws.iter_rows(min_row=min_row, max_row=max_row, min_col=min_col, max_col=max_col)):
         if (base + offset) in hidden:
             continue
         grid.append(list(row))

@@ -270,6 +270,4 @@ def open_workbook(path: Path, engine: Engine) -> Workbook:
     except FileNotFoundError as e:
         raise SourceFileError(f"source file not found: {path}") from e
     except Exception as e:
-        raise SourceFileError(
-            f"could not open {path} with engine={engine!r}: {type(e).__name__}: {e}"
-        ) from e
+        raise SourceFileError(f"could not open {path} with engine={engine!r}: {type(e).__name__}: {e}") from e
