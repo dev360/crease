@@ -747,11 +747,6 @@ def test_null_patterns_match_unfilled_form_placeholders(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-2: forward_fill not yet implemented; continuation rows whose group "
-    "columns are blank emit as standalone records.",
-)
 def test_forward_fill_inherits_group_columns_from_previous_row(tmp_path):
     """A schedule with day-of-week + grower set on the first row of a group,
     blank on continuation rows. ``forward_fill`` should propagate the values
@@ -772,6 +767,7 @@ def test_forward_fill_inherits_group_columns_from_previous_row(tmp_path):
         """
         template_id: forward_fill
         version: 1
+        description: P2-2 fixture - forward-fill grouping columns
         entities:
           - name: placement
             cardinality: many
