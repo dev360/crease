@@ -39,6 +39,12 @@ jobs:
         uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          # RELEASE_PAT inherits the token-owner's `Repository admin` bypass on
+          # the `main` ruleset, which is what lets semantic-release push the
+          # chore(release): X.Y.Z bump commit back to main. The default
+          # GITHUB_TOKEN is `github-actions[bot]`, which the ruleset doesn't
+          # exempt, so the push gets rejected with GH006.
+          token: ${{ secrets.RELEASE_PAT }}
 
       - name: Install uv
         uses: astral-sh/setup-uv@v6
