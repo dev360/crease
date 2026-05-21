@@ -1,0 +1,19 @@
+{# Custom release-notes template.
+
+   Why this exists: PSR's bundled `.components/changes.md.j2` (still v10.5.3)
+   indexes `breaking_descriptions.0` inside a `selectattr`, which raises
+   "list object has no element 0" any time a release contains a commit with
+   no breaking descriptions (i.e. almost every release). PSR prefers this
+   file over the bundled one when it lives in `template_dir`, so we sidestep
+   the bug by owning the template.
+#}
+## {{ release.version.as_tag() }} ({{ release.tagged_date.strftime("%Y-%m-%d") }})
+{% for type_, commits in release["elements"] | dictsort %}
+{% if commits | length > 0 %}
+
+### {{ type_ | title }}
+{% for commit in commits %}
+- {{ commit.commit.summary.rstrip() }} ([`{{ commit.commit.hexsha[:7] }}`]({{ commit.commit.hexsha | commit_hash_url }}))
+{% endfor %}
+{% endif %}
+{% endfor %}
