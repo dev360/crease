@@ -1,0 +1,74 @@
+template_id: repeating_sections_per_tab
+version: 2
+description: Globex Bakeries weekly delivery schedule. Each tab is one week; each
+  tab contains multiple daily delivery sections delimited by 'DELIVERY SCHEDULE' titles
+  in column D; each section has a date row that must be propagated to every delivery
+  row in the section.
+
+blocks:
+- name: daily_section
+  tab_pattern: ^W-\d{2}-\d{2}$
+  starts_at:
+    column: D
+    cell_pattern: ^DELIVERY SCHEDULE$
+  ends_at:
+    column: A
+    cell_pattern: ^={3,}$
+    # strategy: last_in_block  (default — picks the LAST === before the next
+    # DELIVERY SCHEDULE, not the first; the first === sits under the column
+    # header inside the section)
+  separator_rows:
+  - column: A
+    cell_pattern: ^={3,}$
+  - column: A
+    match_blank: true
+  captures:
+  - field: delivery_date
+    from:
+      column: D
+      cell_pattern: ^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY) (\d{1,2}[-/]\d{1,2}[-/]\d{2,4})$
+      regex_group: 2
+    type: date
+    date_formats:
+    - '%m-%d-%Y'
+    - '%m/%d/%y'
+  - field: day_of_week
+    from:
+      column: D
+      cell_pattern: ^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY) .*$
+      regex_group: 1
+    type: string
+
+entities:
+- name: delivery
+  block: daily_section
+  cardinality: many
+  locate:
+    orientation: flat
+    header_anchor:
+      text: STORE
+      match_mode: exact
+  fields:
+  - name: store_name
+    source_column: STORE
+    type: string
+  - name: dock_num
+    source_column: DOCK
+    type: integer
+    nullable: true
+  - name: units
+    source_column: UNITS
+    type: integer
+    nullable: true
+  - name: depot
+    source_column: DEPOT
+    type: string
+    nullable: true
+  - name: lane_sqft
+    source_column: LANE SQ.FT.
+    type: integer
+    nullable: true
+  - name: chilled_or_ambient
+    source_column: CHILLED OR AMBIENT
+    type: string
+    nullable: true

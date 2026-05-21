@@ -6,7 +6,7 @@ import datetime as _dt
 from pathlib import Path
 from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, create_model
+from pydantic import BaseModel, ConfigDict, Field, create_model, field_validator, model_validator
 
 # ---- enums ---------------------------------------------------------------
 
@@ -164,14 +164,127 @@ class Entity(BaseModel):
     enrich: list[Enrich] = []
     unpivot: Unpivot | None = None
 
+    # `blocks:` grammar (template version 2). When set, the entity is scoped
+    # to each instance of the named block; the block's captures merge onto
+    # every emitted row. None = run globally, today's behavior.
+    block: str | None = None
+
+
+# ---- blocks: grammar (template version 2) -------------------------------
+#
+# A `Block` declares a repeating region inside a tab: anchor patterns that
+# delimit each instance, optional per-instance captures (metadata that
+# applies to every row inside), and optional separator-row rules. Entities
+# at the top level reference a block by name via `Entity.block`. There is
+# no nested-blocks form in v2 — composition stays flat.
+
+
+# Coerce an `int` (0-indexed column) or an Excel letter ("A" .. "Z") into a
+# 0-indexed int. Anything else is a validation error. Single-letter only
+# in v2 — multi-letter (e.g. "AA") is out of scope until a real fixture
+# demands it.
+def _coerce_column(v: Any) -> int:
+    if isinstance(v, bool):
+        # bool is a subclass of int in Python; reject explicitly.
+        raise ValueError("column must be an int or single Excel letter, not a bool")
+    if isinstance(v, int):
+        if v < 0:
+            raise ValueError(f"column must be >= 0, got {v}")
+        return v
+    if isinstance(v, str):
+        s = v.strip().upper()
+        if len(s) == 1 and "A" <= s <= "Z":
+            return ord(s) - ord("A")
+        raise ValueError(f"column letter must be A..Z (single letter), got {v!r}")
+    raise ValueError(f"column must be an int or Excel letter, got {type(v).__name__}")
+
+
+class CellAnchor(BaseModel):
+    """Locate a cell by scanning one column for a regex match."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    column: int
+    cell_pattern: str
+    regex_group: int = 0
+    on_multiple: Literal["first", "last", "error"] = "first"
+
+    @field_validator("column", mode="before")
+    @classmethod
+    def _column_letter(cls, v: Any) -> int:
+        return _coerce_column(v)
+
+
+class EndAnchor(CellAnchor):
+    """Close-of-block anchor. Adds the search strategy."""
+
+    strategy: Literal["first_in_block", "last_in_block"] = "last_in_block"
+
+
+class SkipRowRule(BaseModel):
+    """A row filter applied inside a block. Exactly one of cell_pattern or
+    match_blank must be set."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    column: int
+    cell_pattern: str | None = None
+    match_blank: bool = False
+
+    @field_validator("column", mode="before")
+    @classmethod
+    def _column_letter(cls, v: Any) -> int:
+        return _coerce_column(v)
+
+    @model_validator(mode="after")
+    def _exactly_one(self) -> SkipRowRule:
+        has_pattern = self.cell_pattern is not None
+        if has_pattern == self.match_blank:
+            raise ValueError(
+                "SkipRowRule requires exactly one of `cell_pattern` or `match_blank: true`"
+            )
+        return self
+
+
+class Capture(BaseModel):
+    """A piece of per-block-instance metadata. Scanned inside the block,
+    coerced to a type, then merged onto every entity row in the instance."""
+
+    model_config = ConfigDict(extra="forbid", populate_by_name=True)
+
+    field: str
+    from_: CellAnchor = Field(alias="from")
+    type: FieldType
+    date_formats: list[str] = []
+    required: bool = True
+    propagate: bool = True
+
+
+class Block(BaseModel):
+    """A repeating region within a tab."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    name: str
+    tab_pattern: str | None = None
+    starts_at: CellAnchor
+    ends_at: EndAnchor | None = None
+    separator_rows: list[SkipRowRule] = []
+    captures: list[Capture] = []
+
 
 class Template(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     template_id: str
-    version: int = 1
+    # version: 1 = legacy (no `blocks:`); version: 2 = supports `blocks:` and
+    # `Entity.block`. Bump explicitly when authoring a template that uses
+    # the v2 grammar so older loaders can fail loudly instead of silently
+    # ignoring unknown fields.
+    version: Literal[1, 2] = 1
     description: str
     entities: list[Entity]
+    blocks: list[Block] = []
     ignore_tabs: list[str] = []
     notes: list[str] = []
 
@@ -181,6 +294,55 @@ class Template(BaseModel):
     # filename-as-metadata
     filename_pattern: str | None = None
     filename_capture: list[FilenameCapture] = []
+
+    @model_validator(mode="after")
+    def _check_blocks_grammar(self) -> Template:
+        # `blocks:` is a v2 feature.
+        if self.blocks and self.version == 1:
+            raise ValueError(
+                "`blocks:` requires `version: 2`; bump the template version "
+                "or remove the blocks declaration"
+            )
+
+        if not self.blocks:
+            return self
+
+        block_by_name = {b.name: b for b in self.blocks}
+        if len(block_by_name) != len(self.blocks):
+            seen: set[str] = set()
+            dupes = [b.name for b in self.blocks if b.name in seen or seen.add(b.name)]  # type: ignore[func-returns-value]
+            raise ValueError(f"duplicate block name(s): {sorted(set(dupes))}")
+
+        for ent in self.entities:
+            if ent.block is None:
+                continue
+
+            block = block_by_name.get(ent.block)
+            if block is None:
+                # `block_ref_not_found` — entity points at a name that's not declared.
+                raise ValueError(
+                    f"entity {ent.name!r}: block reference {ent.block!r} not found in "
+                    f"template.blocks ({sorted(block_by_name)})"
+                )
+
+            # `entity_tab_with_block` — the block owns tab scope.
+            if ent.locate.tab is not None or ent.locate.tab_pattern is not None:
+                raise ValueError(
+                    f"entity {ent.name!r}: `locate.tab`/`tab_pattern` is not allowed "
+                    f"when `block: {ent.block!r}` is set; the block owns tab scope"
+                )
+
+            # `field_shadow_collision` — capture name collides with an entity field name.
+            capture_names = {c.field for c in block.captures}
+            field_names = {f.name for f in ent.fields}
+            collisions = capture_names & field_names
+            if collisions:
+                raise ValueError(
+                    f"entity {ent.name!r}: field name(s) {sorted(collisions)} collide "
+                    f"with captures on block {block.name!r}; rename one side"
+                )
+
+        return self
 
     @classmethod
     def load(cls, path: str | Path) -> Template:
