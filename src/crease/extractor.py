@@ -28,9 +28,12 @@ from crease._locate import (
 )
 from crease._workbook import Engine, Sheet, Workbook, open_workbook, select_engine
 from crease.template_model import (
+    Block,
+    Capture,
     DataEnd,
     Enrich,
     Entity,
+    SkipRowRule,
     Template,
 )
 
@@ -419,11 +422,32 @@ def _extract_flat(
     tab: TabMatch,
     template: Template,
     result: ExtractResult,
+    *,
+    cell_range_override: CellRange | None = None,
+    separator_rows: list[SkipRowRule] | None = None,
+    extra_fields: dict[str, Any] | None = None,
 ) -> list[dict[str, Any]] | dict[str, Any] | None:
-    cell_range = parse_cell_range(entity.locate.cell_range) if entity.locate.cell_range else None
+    # `cell_range_override` is set when extracting inside a block instance — the
+    # block's [start_row, end_row] window is synthesized into a CellRange so we
+    # reuse the same row-window machinery as the user-facing `cell_range`.
+    # `separator_rows` are applied BEFORE header detection so the entity's
+    # header_anchor scan doesn't latch onto a separator. `extra_fields` are
+    # block captures merged into every emitted row (B3 propagation).
+    cell_range = cell_range_override
+    if cell_range is None and entity.locate.cell_range:
+        cell_range = parse_cell_range(entity.locate.cell_range)
     grid = _read_flat_grid(ws, entity.locate, cell_range)
 
-    header_idx = resolve_header_row(ws, entity.locate)
+    # When extracting inside a block instance, restrict the header_anchor
+    # scan to the instance's row range so an outer header anchor can't
+    # latch onto a row outside the block.
+    if cell_range is not None:
+        scope_min = cell_range.start_row
+        scope_max = cell_range.end_row
+    else:
+        scope_min = 0
+        scope_max = None
+    header_idx = resolve_header_row(ws, entity.locate, min_row=scope_min, max_row=scope_max)
     if cell_range:
         header_idx = max(0, header_idx - cell_range.start_row)
 
@@ -447,6 +471,11 @@ def _extract_flat(
         else header_idx + 1
     )
     data_rows = grid[data_starts_offset:]
+
+    # Apply separator-row filtering AFTER the header is identified so the
+    # filter can't shift the header position out from under us.
+    if separator_rows:
+        data_rows = _apply_separator_rows(data_rows, separator_rows, cell_range)
 
     # Map field → header column index
     field_to_col: dict[str, int] = {}
@@ -516,6 +545,13 @@ def _extract_flat(
 
         record = _apply_enrich(record, entity.enrich, tab)
         record = _filename_inject(record, template, result.source_file)
+        if extra_fields:
+            # Captures from the enclosing block instance merge onto every
+            # emitted row. Child field names win over capture names — but
+            # `field_shadow_collision` should have already caught that at
+            # `Template.model_validate`, so in practice this is just a
+            # belt-and-suspenders.
+            record = {**extra_fields, **record}
         extracted.append(record)
 
     return extracted
@@ -731,7 +767,374 @@ def _apply_unpivot(records: list[dict[str, Any]], entity: Entity) -> list[dict[s
 # ---- entity dispatch -----------------------------------------------------
 
 
+# ---- blocks: extraction --------------------------------------------------
+
+
+@dataclass
+class _BlockInstance:
+    """One occurrence of a block in a tab (between consecutive starts_at hits,
+    or terminated by ends_at per strategy)."""
+
+    start_row: int  # 0-indexed, inclusive — row where starts_at matched
+    end_row: int  # 0-indexed, inclusive — last row that belongs to this instance
+
+
+def _cell_matches(value: Any, pattern: re.Pattern) -> tuple[bool, re.Match | None]:
+    """Apply `cell_pattern` to a cell value. Per B6: re.fullmatch against the
+    stripped string repr; None / empty cells never match.
+    """
+    if value is None:
+        return False, None
+    s = str(value).strip()
+    if not s:
+        return False, None
+    m = pattern.fullmatch(s)
+    return (m is not None), m
+
+
+def _row_matches_skip(row: list[Any], rule: SkipRowRule, compiled: re.Pattern | None) -> bool:
+    """`SkipRowRule` matches when its column-cell satisfies either
+    `cell_pattern` or `match_blank: true`."""
+    col = rule.column
+    cell = row[col] if col < len(row) else None
+    if rule.match_blank:
+        if cell is None:
+            return True
+        if isinstance(cell, str) and cell.strip() == "":
+            return True
+        return False
+    # cell_pattern path; compiled regex passed in to avoid re-compiling per row
+    assert compiled is not None
+    ok, _ = _cell_matches(cell, compiled)
+    return ok
+
+
+def _apply_separator_rows(
+    grid: list[list[Any]],
+    rules: list[SkipRowRule],
+    cell_range: CellRange | None,
+) -> list[list[Any]]:
+    """Filter out rows in `grid` that match any of the block's separator rules.
+
+    The grid is already row-windowed to the block instance (via cell_range);
+    `column` indexes on each rule are 0-indexed against the SHEET, so we
+    adjust to the windowed column offset before indexing.
+    """
+    col_offset = cell_range.start_col if cell_range else 0
+    compiled: list[re.Pattern | None] = [
+        re.compile(r.cell_pattern) if r.cell_pattern else None for r in rules
+    ]
+    out: list[list[Any]] = []
+    for row in grid:
+        # Translate sheet-absolute column → grid-relative.
+        if any(
+            _row_matches_skip(
+                row,
+                SkipRowRule(
+                    column=r.column - col_offset,
+                    cell_pattern=r.cell_pattern,
+                    match_blank=r.match_blank,
+                ),
+                compiled[i],
+            )
+            for i, r in enumerate(rules)
+        ):
+            continue
+        out.append(row)
+    return out
+
+
+def _find_block_instances(
+    ws: Sheet,
+    block: Block,
+    result: ExtractResult,
+) -> list[_BlockInstance]:
+    """Scan `block.starts_at.column` for every match. Pair with `ends_at` per
+    strategy. Returns instances; pushes structural errors to `result.errors`
+    for anchor failures.
+    """
+    starts_at_re = re.compile(block.starts_at.cell_pattern)
+    ends_at_re = re.compile(block.ends_at.cell_pattern) if block.ends_at else None
+
+    # First pass: collect all starts_at row indices and all ends_at row indices
+    # in the worksheet (single linear scan).
+    start_col = block.starts_at.column
+    end_col = block.ends_at.column if block.ends_at else -1
+    start_rows: list[int] = []
+    end_rows: list[int] = []
+    for r_idx, row in enumerate(ws.iter_rows()):
+        cells = list(row)
+        if start_col < len(cells):
+            ok, _ = _cell_matches(cells[start_col], starts_at_re)
+            if ok:
+                start_rows.append(r_idx)
+        if ends_at_re is not None and end_col != start_col and end_col < len(cells):
+            ok, _ = _cell_matches(cells[end_col], ends_at_re)
+            if ok:
+                end_rows.append(r_idx)
+        elif ends_at_re is not None and end_col == start_col and start_col < len(cells):
+            # Same column for starts_at and ends_at — re-check against ends_at_re;
+            # a row can be both a start AND an end, so we tally both.
+            ok, _ = _cell_matches(cells[start_col], ends_at_re)
+            if ok:
+                end_rows.append(r_idx)
+
+    if not start_rows:
+        result.errors.append(
+            ExtractionError(
+                entity=None,
+                reason="block_starts_not_found",
+                details={"block": block.name, "tab": ws.name},
+            )
+        )
+        return []
+
+    # Pair starts with ends per strategy.
+    instances: list[_BlockInstance] = []
+    for i, start in enumerate(start_rows):
+        next_start = start_rows[i + 1] if i + 1 < len(start_rows) else None
+        # Closing-window upper bound: just before next start, or EOF.
+        ceiling = (next_start - 1) if next_start is not None else None
+
+        if ends_at_re is None:
+            # No ends_at: instance ends just before next start, or at EOF.
+            # We don't know EOF row from a streaming iter; use a sentinel that
+            # _read_flat_grid + iter_rows will naturally clip to last data row.
+            end_row = ceiling if ceiling is not None else 1_000_000
+            instances.append(_BlockInstance(start_row=start, end_row=end_row))
+            continue
+
+        # ends_at: find candidates in (start, ceiling]
+        candidates = [e for e in end_rows if e > start and (ceiling is None or e <= ceiling)]
+        if not candidates:
+            result.errors.append(
+                ExtractionError(
+                    entity=None,
+                    reason="block_unterminated",
+                    details={
+                        "block": block.name,
+                        "tab": ws.name,
+                        "instance": i,
+                        "starts_at_row": start,
+                    },
+                )
+            )
+            continue
+
+        if block.ends_at.strategy == "first_in_block":
+            end_row = candidates[0]
+        else:  # last_in_block (default)
+            end_row = candidates[-1]
+        instances.append(_BlockInstance(start_row=start, end_row=end_row))
+    return instances
+
+
+def _resolve_captures(
+    ws: Sheet,
+    block: Block,
+    instance: _BlockInstance,
+    result: ExtractResult,
+) -> dict[str, Any]:
+    """For each capture, scan its `from.column` between [start_row, end_row]
+    inclusive, pick per `on_multiple`, extract regex_group, coerce."""
+    out: dict[str, Any] = {}
+    if not block.captures:
+        return out
+
+    # Single pass through the window: collect per-capture matches.
+    compiled: list[tuple[Capture, re.Pattern]] = [(c, re.compile(c.from_.cell_pattern)) for c in block.captures]
+    matches_per_capture: dict[str, list[tuple[int, str]]] = {c.field: [] for c, _ in compiled}
+
+    iter_min = instance.start_row + 1
+    iter_max = instance.end_row + 1
+    for offset, row in enumerate(ws.iter_rows(min_row=iter_min, max_row=iter_max)):
+        r_idx = instance.start_row + offset
+        cells = list(row)
+        for cap, pat in compiled:
+            col = cap.from_.column
+            if col >= len(cells):
+                continue
+            ok, m = _cell_matches(cells[col], pat)
+            if not ok:
+                continue
+            # Pull the requested regex group (0 = whole match)
+            try:
+                group_val = m.group(cap.from_.regex_group)
+            except IndexError:
+                # group index out of range; treat as no-match for this row
+                continue
+            matches_per_capture[cap.field].append((r_idx, group_val))
+
+    for cap, _ in compiled:
+        hits = matches_per_capture[cap.field]
+        if len(hits) == 0:
+            if cap.required:
+                result.errors.append(
+                    ExtractionError(
+                        entity=None,
+                        reason="capture_no_match",
+                        details={
+                            "block": block.name,
+                            "tab": ws.name,
+                            "instance_start_row": instance.start_row,
+                            "field": cap.field,
+                        },
+                    )
+                )
+            out[cap.field] = None
+            continue
+        if len(hits) > 1 and cap.from_.on_multiple == "error":
+            result.errors.append(
+                ExtractionError(
+                    entity=None,
+                    reason="capture_multiple_matches",
+                    details={
+                        "block": block.name,
+                        "tab": ws.name,
+                        "instance_start_row": instance.start_row,
+                        "field": cap.field,
+                        "n_matches": len(hits),
+                    },
+                )
+            )
+            out[cap.field] = None
+            continue
+        if cap.from_.on_multiple == "last" and len(hits) > 1:
+            _, raw = hits[-1]
+        else:
+            # "first" (default), or "error" with exactly one hit, or "last" with exactly one
+            _, raw = hits[0]
+        out[cap.field] = _coerce_capture(raw, cap)
+    return out
+
+
+def _coerce_capture(raw: str, cap: Capture) -> Any:
+    """Coerce a captured regex-group string to `cap.type`. Mirrors the
+    existing field coercion convention — dates come back as ISO strings, not
+    `date` objects, so block-scoped rows can be JSON-serialized the same way
+    the rest of the corpus is."""
+    try:
+        if cap.type == "date" and cap.date_formats:
+            import datetime as _dt
+
+            for fmt in cap.date_formats:
+                try:
+                    return _dt.datetime.strptime(raw, fmt).date().isoformat()
+                except ValueError:
+                    continue
+            raise CoercionError(value=raw, expected="date")
+        # For everything else, route through the standard field coercer with
+        # a throwaway FieldSpec. Picks up the same ISO-string handling for
+        # datetime, the same int/number coercion, etc.
+        from crease.template_model import FieldSpec
+
+        spec = FieldSpec(
+            name=cap.field,
+            type=cap.type,
+            date_format=(cap.date_formats[0] if cap.date_formats else None),
+        )
+        return coerce(raw, spec)
+    except CoercionError:
+        # Coercion errors on captures are surfaced as the raw value passed
+        # through. Negative-test coverage for capture coercion failures is
+        # added in commit 3 (`blocks_capture_wrong_type`).
+        return raw
+
+
+def _extract_for_block(
+    workbook: Workbook,
+    entity: Entity,
+    block: Block,
+    template: Template,
+    result: ExtractResult,
+) -> list[dict[str, Any]]:
+    """Top-level driver for entities scoped to a block. Iterates matching
+    tabs, finds each block instance, resolves captures, runs the entity
+    extraction per instance, merges captures, aggregates."""
+    # The block owns tab scope. Build a stand-in Locate so we can reuse
+    # `find_tabs` without mutating the entity's locate.
+    from crease.template_model import Locate as _LocateClass  # local to avoid top-of-file churn
+
+    block_locate = _LocateClass(
+        tab=None,
+        tab_pattern=block.tab_pattern,
+        orientation=entity.locate.orientation,
+    )
+    tabs = find_tabs(workbook, block_locate, template.ignore_tabs)
+    if not tabs:
+        result.errors.append(
+            ExtractionError(
+                entity=entity.name,
+                reason="tab_pattern_no_match" if block.tab_pattern else "missing_tab",
+                details={"block": block.name, "tab_pattern": block.tab_pattern},
+            )
+        )
+        return []
+
+    all_rows: list[dict[str, Any]] = []
+    for tab in tabs:
+        ws = tab.worksheet
+        instances = _find_block_instances(ws, block, result)
+        for instance in instances:
+            captures = _resolve_captures(ws, block, instance, result)
+            # Only carry captures with propagate=True onto the row.
+            propagating = {
+                cap.field: captures.get(cap.field)
+                for cap in block.captures
+                if cap.propagate
+            }
+            cell_range_for_instance = CellRange(
+                start_row=instance.start_row,
+                end_row=instance.end_row,
+                start_col=0,
+                end_col=None,
+            )
+            rows = _extract_flat(
+                ws,
+                entity,
+                tab,
+                template,
+                result,
+                cell_range_override=cell_range_for_instance,
+                separator_rows=block.separator_rows,
+                extra_fields=propagating,
+            )
+            if isinstance(rows, list):
+                all_rows.extend(rows)
+            elif rows is not None:
+                all_rows.append(rows)
+    return all_rows
+
+
 def _extract_entity(workbook: Workbook, entity: Entity, template: Template, result: ExtractResult) -> None:  # noqa: E501
+    # Block-scoped entities take the block path entirely; the block owns
+    # tab targeting and instance discovery. The template validator already
+    # checked that the named block exists.
+    if entity.block is not None:
+        block = next((b for b in template.blocks if b.name == entity.block), None)
+        if block is None:
+            # Defense in depth — the template-load validator should have
+            # caught this. If it didn't, surface it instead of silently
+            # producing no rows.
+            result.errors.append(
+                ExtractionError(
+                    entity=entity.name,
+                    reason="block_ref_not_found",
+                    details={"block": entity.block},
+                )
+            )
+            result.canonical[_pluralize(entity.name) if entity.cardinality == "many" else entity.name] = (
+                [] if entity.cardinality == "many" else None
+            )
+            return
+        rows = _extract_for_block(workbook, entity, block, template, result)
+        key = entity.name if entity.cardinality == "one" else _pluralize(entity.name)
+        if entity.cardinality == "one":
+            result.canonical[key] = rows[0] if rows else None
+        else:
+            result.canonical[key] = rows
+        return
+
     tabs = find_tabs(workbook, entity.locate, template.ignore_tabs)
     if not tabs:
         result.errors.append(
