@@ -142,6 +142,11 @@ def coerce(value: Any, field: FieldSpec) -> Any:
         if isinstance(value, dt.datetime):
             return value.date().isoformat() if t == "date" else value.isoformat()
         if isinstance(value, dt.date):
+            # Calamine returns `date` for date-only cells; openpyxl returns
+            # `datetime` at midnight. Promote so `type: datetime` fields
+            # produce the same ISO string on either backend.
+            if t == "datetime":
+                return dt.datetime.combine(value, dt.time.min).isoformat()
             return value.isoformat()
         if isinstance(value, str):
             s = value.strip()
