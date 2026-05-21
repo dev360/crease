@@ -42,7 +42,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies (with docs extra)
-        run: uv sync --all-extras --group test
+        run: uv sync --locked --extra docs
 
       - name: Build docs (strict)
         run: uv run mkdocs build --strict

@@ -34,7 +34,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
 
       - name: Install dependencies (core + extras + test)
-        run: uv sync --all-extras --group test
+        run: uv sync --locked --all-extras --group test
 
       - name: Regenerate test corpus
         run: uv run python -m test_cases.generate
