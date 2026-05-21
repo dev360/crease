@@ -25,7 +25,7 @@ FieldType = Literal[
 Orientation = Literal["flat", "property_sheet", "anchored"]
 MatchMode = Literal["exact", "contains", "regex"]
 Direction = Literal["right", "below", "left", "above"]
-DataEndType = Literal["end_of_sheet", "blank_row", "value_match", "skip_trailing_rows"]
+DataEndType = Literal["end_of_sheet", "blank_row", "value_match", "value_pattern", "skip_trailing_rows"]
 EnrichSource = Literal["tab_name", "tab_name_regex_group"]
 Normalize = Literal["none", "trim", "lower", "trim_lower"]
 
@@ -61,8 +61,9 @@ class DataEnd(BaseModel):
 
     type: DataEndType = "end_of_sheet"
     n_consecutive: int = 1  # blank_row
-    column: int = 0  # value_match
+    column: int = 0  # value_match | value_pattern
     value: str | None = None  # value_match
+    value_pattern: str | None = None  # value_pattern; full-match regex
     rows: int = 0  # skip_trailing_rows
 
 
@@ -111,6 +112,19 @@ class LocateSkipRule(BaseModel):
     value_pattern: str | None = None  # regex; full-match
 
 
+class AnnotationRule(BaseModel):
+    """One predicate for ``Locate.row_is_annotation_if``.
+
+    A row is considered an annotation (banner, divider, free-text note)
+    and dropped before extraction when fewer than or equal to
+    ``only_columns_populated`` cells in the row carry a non-blank value.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    only_columns_populated: int = 1
+
+
 class Locate(BaseModel):
     """Where (and how) to find an entity's data."""
 
@@ -131,6 +145,7 @@ class Locate(BaseModel):
     data_starts_row: int | None = None
     data_ends_at: DataEnd | None = None
     skip_row_if: list[LocateSkipRule] = []
+    row_is_annotation_if: list[AnnotationRule] = []
 
     # property_sheet
     label_col: int = 0
@@ -182,6 +197,7 @@ class FieldSpec(BaseModel):
 
     # extraction hints
     null_tokens: list[str] | None = None  # None = use template default; [] = no tokens
+    null_patterns: list[str] | None = None  # None = use template default; [] = no patterns
     normalize: Normalize = "none"
     treat_as_text: bool = False
     true_values: list[str] | None = None  # boolean only
@@ -324,6 +340,7 @@ class Template(BaseModel):
 
     # template-level extraction defaults (applied to all fields unless overridden)
     null_tokens: list[str] | None = None  # None = library defaults
+    null_patterns: list[str] | None = None  # None = no regex collapse; [] = same
 
     # filename-as-metadata
     filename_pattern: str | None = None

@@ -703,10 +703,6 @@ def test_cell_range_restricts_extraction_to_subrectangle(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-1: null_patterns (regex) not yet implemented; null_tokens accepts " "exact strings only.",
-)
 def test_null_patterns_match_unfilled_form_placeholders(tmp_path):
     """A regex ``^\\[.+\\]$`` should collapse any bracketed placeholder
     (``[Company]``, ``[Email]``, ``[Fax]``) to ``None`` without enumerating
@@ -725,6 +721,7 @@ def test_null_patterns_match_unfilled_form_placeholders(tmp_path):
         """
         template_id: null_patterns_brackets
         version: 1
+        description: P2-1 fixture - regex null_patterns
         null_patterns:
           - "^\\\\[.+\\\\]$"
         entities:
@@ -803,10 +800,6 @@ def test_forward_fill_inherits_group_columns_from_previous_row(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-3: data_ends_at supports only exact-string `value`, not regex `value_pattern`.",
-)
 def test_data_ends_at_value_pattern_stops_on_regex_match(tmp_path):
     """A sentinel row whose col 0 reads ``AVG AGE  25+ :`` (double-space, trailing
     space-colon — operator typo) should stop the read via a regex on
@@ -827,6 +820,7 @@ def test_data_ends_at_value_pattern_stops_on_regex_match(tmp_path):
         """
         template_id: data_ends_at_regex
         version: 1
+        description: P2-3 fixture - data_ends_at value_pattern (regex)
         entities:
           - name: row
             cardinality: many
@@ -1096,11 +1090,6 @@ def test_duplicate_policy_ignore_suppresses_intentional_repeats(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-9: row_is_annotation_if (single-column-populated heuristic) "
-    "not yet implemented; free-text rows emit as records with one populated field.",
-)
 def test_row_is_annotation_drops_single_cell_rows(tmp_path):
     """An ``-- REVISED --`` banner row in col A with everything else blank
     should be dropped, not emitted as a record with most fields null.
@@ -1118,6 +1107,7 @@ def test_row_is_annotation_drops_single_cell_rows(tmp_path):
         """
         template_id: row_is_annotation_if
         version: 1
+        description: P2-9 fixture - row_is_annotation_if drops banner rows
         entities:
           - name: placement
             cardinality: many

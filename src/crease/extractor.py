@@ -15,6 +15,7 @@ from crease._coerce import (
     collapse_null,
     normalize_header,
     normalize_value,
+    resolve_null_patterns,
     resolve_null_tokens,
 )
 from crease._locate import (
@@ -28,6 +29,7 @@ from crease._locate import (
 )
 from crease._workbook import Engine, Sheet, Workbook, open_workbook, select_engine
 from crease.template_model import (
+    AnnotationRule,
     Block,
     Capture,
     DataEnd,
@@ -411,6 +413,16 @@ def _apply_data_end(rows: list[list[Any]], header_idx: int, data_end: DataEnd | 
                 return rows[: header_idx + 1] + data[:i]
         return rows
 
+    if data_end.type == "value_pattern":
+        col = data_end.column
+        if data_end.value_pattern is None:
+            return rows
+        pat = re.compile(data_end.value_pattern)
+        for i, r in enumerate(data):
+            if col < len(r) and r[col] is not None and pat.fullmatch(str(r[col])):
+                return rows[: header_idx + 1] + data[:i]
+        return rows
+
     if data_end.type == "skip_trailing_rows":
         n = data_end.rows
         return rows[:-n] if n > 0 else rows
@@ -495,6 +507,13 @@ def _locate_skip_rule_applies(row: list[Any], rule: _ResolvedSkipRule) -> bool:
             return False
         matched_any = True
     return matched_any
+
+
+def _row_is_annotation(row: list[Any], rules: list[AnnotationRule]) -> bool:
+    if not rules:
+        return False
+    populated = sum(1 for v in row if v is not None and not (isinstance(v, str) and v.strip() == ""))
+    return any(populated <= rule.only_columns_populated for rule in rules)
 
 
 def _extract_flat(
@@ -655,18 +674,22 @@ def _extract_flat(
 
     extracted: list[dict[str, Any]] = []
     null_token_cache = {f.name: resolve_null_tokens(f, template) for f in entity.fields}
+    null_pattern_cache = {f.name: resolve_null_patterns(f, template) for f in entity.fields}
+    annotation_rules = list(entity.locate.row_is_annotation_if)
 
     for r_idx, row in enumerate(data_rows):
         if all(v is None for v in row):
             continue  # skip fully blank rows mid-data; validator may flag
         if _row_matches_locate_skip(row, skip_rules):
             continue
+        if _row_is_annotation(row, annotation_rules):
+            continue
 
         record: dict[str, Any] = {}
         for f in entity.fields:
             col = field_to_col.get(f.name)
             raw = row[col] if (col is not None and col < len(row)) else None
-            value = collapse_null(raw, null_token_cache[f.name])
+            value = collapse_null(raw, null_token_cache[f.name], null_pattern_cache[f.name])
             value = normalize_value(value, f.normalize)
 
             if value is None:
@@ -756,7 +779,8 @@ def _extract_property_sheet(
         key = normalize_header(f.source_label).rstrip(":")
         raw = label_to_value.get(key)
         nulls = resolve_null_tokens(f, template)
-        raw = collapse_null(raw, nulls)
+        patterns = resolve_null_patterns(f, template)
+        raw = collapse_null(raw, nulls, patterns)
         raw = normalize_value(raw, f.normalize)
         if raw is None:
             record[f.name] = None
@@ -829,7 +853,8 @@ def _extract_anchored(
         r, c = loc
         raw = _walk_from(grid, r, c, f.anchor)
         nulls = resolve_null_tokens(f, template)
-        raw = collapse_null(raw, nulls)
+        patterns = resolve_null_patterns(f, template)
+        raw = collapse_null(raw, nulls, patterns)
         raw = normalize_value(raw, f.normalize)
         if raw is None:
             record[f.name] = None
