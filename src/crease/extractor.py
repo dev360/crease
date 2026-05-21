@@ -1000,11 +1000,28 @@ def _resolve_captures(
             out[cap.field] = None
             continue
         if cap.from_.on_multiple == "last" and len(hits) > 1:
-            _, raw = hits[-1]
+            row_idx, raw = hits[-1]
         else:
             # "first" (default), or "error" with exactly one hit, or "last" with exactly one
-            _, raw = hits[0]
-        out[cap.field] = _coerce_capture(raw, cap)
+            row_idx, raw = hits[0]
+        try:
+            out[cap.field] = _coerce_capture(raw, cap)
+        except CoercionError as exc:
+            # Surface as a row-level `wrong_type` keyed to the capture so the
+            # validator picks it up the same way it does field-level coercion
+            # failures.
+            result.row_errors.append(
+                RowExtractError(
+                    entity=cap.field,
+                    row=row_idx,
+                    field=cap.field,
+                    reason="wrong_type",
+                    expected=cap.type,
+                    got=repr(raw),
+                    likely_cause=getattr(exc, "likely_cause", None),
+                )
+            )
+            out[cap.field] = raw
     return out
 
 
@@ -1012,33 +1029,28 @@ def _coerce_capture(raw: str, cap: Capture) -> Any:
     """Coerce a captured regex-group string to `cap.type`. Mirrors the
     existing field coercion convention — dates come back as ISO strings, not
     `date` objects, so block-scoped rows can be JSON-serialized the same way
-    the rest of the corpus is."""
-    try:
-        if cap.type == "date" and cap.date_formats:
-            import datetime as _dt
+    the rest of the corpus is. Raises `CoercionError` on failure so the
+    caller can emit a `wrong_type` row error tied to the capture."""
+    if cap.type == "date" and cap.date_formats:
+        import datetime as _dt
 
-            for fmt in cap.date_formats:
-                try:
-                    return _dt.datetime.strptime(raw, fmt).date().isoformat()
-                except ValueError:
-                    continue
-            raise CoercionError(value=raw, expected="date")
-        # For everything else, route through the standard field coercer with
-        # a throwaway FieldSpec. Picks up the same ISO-string handling for
-        # datetime, the same int/number coercion, etc.
-        from crease.template_model import FieldSpec
+        for fmt in cap.date_formats:
+            try:
+                return _dt.datetime.strptime(raw, fmt).date().isoformat()
+            except ValueError:
+                continue
+        raise CoercionError(value=raw, expected="date")
+    # For everything else, route through the standard field coercer with
+    # a throwaway FieldSpec. Picks up the same ISO-string handling for
+    # datetime, the same int/number coercion, etc.
+    from crease.template_model import FieldSpec
 
-        spec = FieldSpec(
-            name=cap.field,
-            type=cap.type,
-            date_format=(cap.date_formats[0] if cap.date_formats else None),
-        )
-        return coerce(raw, spec)
-    except CoercionError:
-        # Coercion errors on captures are surfaced as the raw value passed
-        # through. Negative-test coverage for capture coercion failures is
-        # added in commit 3 (`blocks_capture_wrong_type`).
-        return raw
+    spec = FieldSpec(
+        name=cap.field,
+        type=cap.type,
+        date_format=(cap.date_formats[0] if cap.date_formats else None),
+    )
+    return coerce(raw, spec)
 
 
 def _extract_for_block(

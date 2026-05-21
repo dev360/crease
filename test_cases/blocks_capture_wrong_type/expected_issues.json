@@ -1,0 +1,10 @@
+{
+  "verdict": "needs_review",
+  "issues": [
+    {
+      "entity": "order_date",
+      "field": "order_date",
+      "reason": "wrong_type"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "template_id": "blocks_capture_no_match_required",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_date": null,
+      "order_id": "ORD-2200",
+      "customer": "Lewis, Wiggins and Blankenship",
+      "quantity": 33
+    },
+    {
+      "order_date": null,
+      "order_id": "ORD-2201",
+      "customer": "Blair and Sons",
+      "quantity": 14
+    },
+    {
+      "order_date": null,
+      "order_id": "ORD-2202",
+      "customer": "Beltran-Caldwell",
+      "quantity": 39
+    }
+  ]
+}

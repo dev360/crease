@@ -1,0 +1,10 @@
+{
+  "verdict": "reject",
+  "issues": [
+    {
+      "entity": "",
+      "field": null,
+      "reason": "capture_no_match"
+    }
+  ]
+}

@@ -1,0 +1,19 @@
+{
+  "template_id": "blocks_capture_multiple_matches_error",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_date": null,
+      "order_id": "ORD-2300",
+      "customer": "Adams Group",
+      "quantity": 4
+    },
+    {
+      "order_date": null,
+      "order_id": "ORD-2301",
+      "customer": "Rodriguez-Santana",
+      "quantity": 18
+    }
+  ]
+}

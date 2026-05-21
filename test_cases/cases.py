@@ -763,6 +763,291 @@ def case_corrupted_below_minimum() -> TestCase:
 
 
 # =====================================================================
+# BLOCKS-grammar negative cases
+# =====================================================================
+#
+# These exercise the `blocks:` v2 grammar's structural failure modes —
+# the file parses (no Python exception) but the report carries a
+# structured error that downstream consumers can route on.
+#
+# Every fixture below is fully synthetic: Acme order data, ORD-#### IDs,
+# example.com emails, fictitious DAY M-D-YYYY date rows. Nothing is
+# derived from any external file.
+
+_BLOCK_SECTION_TEMPLATE = {
+    "template_id": "TBD",
+    "version": 2,
+    "description": "Weekly order schedule with daily sections delimited by anchors.",
+    "blocks": [
+        {
+            "name": "daily_section",
+            "tab_pattern": r"^W-\d+$",
+            "starts_at": {"column": "D", "cell_pattern": r"^ORDER SCHEDULE$"},
+            "ends_at": {"column": "A", "cell_pattern": r"^={3,}$"},
+            "separator_rows": [
+                {"column": "A", "cell_pattern": r"^={3,}$"},
+                {"column": "A", "match_blank": True},
+            ],
+            "captures": [
+                {
+                    "field": "order_date",
+                    "from": {"column": "D", "cell_pattern": r"^DAY (\d+-\d+-\d+)$", "regex_group": 1},
+                    "type": "date",
+                    "date_formats": ["%m-%d-%Y"],
+                }
+            ],
+        }
+    ],
+    "entities": [
+        {
+            "name": "order",
+            "block": "daily_section",
+            "cardinality": "many",
+            "locate": {
+                "orientation": "flat",
+                "header_anchor": {"text": "ORDER_ID", "match_mode": "exact"},
+            },
+            "fields": [
+                {"name": "order_id", "source_column": "ORDER_ID", "type": "string", "pattern": r"^ORD-\d{4}$"},
+                {"name": "customer", "source_column": "CUSTOMER", "type": "string"},
+                {"name": "quantity", "source_column": "QUANTITY", "type": "integer", "minimum": 1},
+            ],
+        }
+    ],
+}
+
+
+def _block_template(template_id: str, **overrides) -> dict:
+    """Deep-ish copy of the base template with optional knobs flipped."""
+    import copy
+
+    t = copy.deepcopy(_BLOCK_SECTION_TEMPLATE)
+    t["template_id"] = template_id
+    for k, v in overrides.items():
+        t[k] = v
+    return t
+
+
+def _append_string_row(ws, values: list) -> None:
+    """Like `ws.append`, but forces every non-None cell to string type.
+
+    openpyxl interprets any string starting with `=` as a formula by default,
+    so `ws.append(["===="])` writes a formula cell that calamine then
+    evaluates to an empty string. Setting `data_type = 's'` after assignment
+    pins the cell to a literal string both backends read identically.
+    """
+    next_row = ws.max_row + 1 if ws.max_row else 1
+    for col_idx, v in enumerate(values, start=1):
+        if v is None:
+            continue
+        cell = ws.cell(row=next_row, column=col_idx, value=v)
+        if isinstance(v, str):
+            cell.data_type = "s"
+
+
+def _write_daily_section(ws, day_label: str | None, orders: list[dict], *, write_end_anchor: bool = True) -> None:
+    """Append one daily section to `ws`: start anchor, optional date row, header,
+    data rows, end anchor. Coordinates:
+        col A: free (used by end anchor `====`)
+        col D: holds the start anchor `ORDER SCHEDULE` and the date row text
+        cols A..C: header `ORDER_ID`, `CUSTOMER`, `QUANTITY` + data
+    """
+    _append_string_row(ws, [None, None, None, "ORDER SCHEDULE"])  # start anchor in col D
+    ws.append([None] * 4)
+    if day_label is not None:
+        _append_string_row(ws, [None, None, None, day_label])  # date-row text the capture targets
+        ws.append([None] * 4)
+    _append_string_row(ws, ["ORDER_ID", "CUSTOMER", "QUANTITY"])  # header
+    for o in orders:
+        ws.append([o["order_id"], o["customer"], o["quantity"]])
+    if write_end_anchor:
+        _append_string_row(ws, ["===="])
+
+
+def _mk_orders(fake: Faker, n: int, first_id: int) -> list[dict]:
+    return [
+        {
+            "order_id": f"ORD-{first_id + i:04d}",
+            "customer": fake.company(),
+            "quantity": random.randint(1, 50),
+        }
+        for i in range(n)
+    ]
+
+
+def case_blocks_starts_not_found() -> TestCase:
+    """Tab matches `tab_pattern` but the `starts_at` cell never appears.
+
+    Expected: a `block_starts_not_found` structural error; no rows extracted.
+    """
+    fake = _seeded_faker(120)
+    wb = new_workbook()
+    ws = wb.create_sheet("W-1")
+    # The tab has rows that look like data, but no ORDER SCHEDULE anchor anywhere.
+    ws.append(["ORDER_ID", "CUSTOMER", "QUANTITY"])
+    for o in _mk_orders(fake, n=3, first_id=2000):
+        ws.append([o["order_id"], o["customer"], o["quantity"]])
+
+    template = _block_template("blocks_starts_not_found")
+    expected = _envelope("blocks_starts_not_found", orders=[])
+    expected_issues = [{"entity": "", "field": None, "reason": "block_starts_not_found"}]
+
+    return TestCase(
+        name="blocks_starts_not_found",
+        description="Weekly tab with order-like rows but no block start anchor.",
+        workbook=wb,
+        template=template,
+        expected=expected,
+        expected_verdict="reject",
+        expected_issues=expected_issues,
+        notes="`tab_pattern` matches the tab but `starts_at` never fires. Empty extraction, structural error.",
+    )
+
+
+def case_blocks_unterminated() -> TestCase:
+    """`starts_at` matches but the `ends_at` anchor never fires before EOF.
+
+    Expected: a `block_unterminated` structural error.
+    """
+    fake = _seeded_faker(121)
+    wb = new_workbook()
+    ws = wb.create_sheet("W-1")
+    # One section with the start anchor, a date row, a header row, data — but
+    # NO end anchor row. EOF without a closing `====` in col A.
+    orders = _mk_orders(fake, n=3, first_id=2100)
+    _write_daily_section(ws, "DAY 4-13-2026", orders, write_end_anchor=False)
+
+    template = _block_template("blocks_unterminated")
+    expected = _envelope("blocks_unterminated", orders=[])
+    expected_issues = [{"entity": "", "field": None, "reason": "block_unterminated"}]
+
+    return TestCase(
+        name="blocks_unterminated",
+        description="A block whose ends_at anchor never appears before EOF.",
+        workbook=wb,
+        template=template,
+        expected=expected,
+        expected_verdict="reject",
+        expected_issues=expected_issues,
+        notes="`ends_at` is configured but no candidate row matches. Halts the block; structural error.",
+    )
+
+
+def case_blocks_capture_no_match_required() -> TestCase:
+    """A capture's `from` pattern matches zero cells in the block instance.
+
+    Expected: a `capture_no_match` structural error.
+    """
+    fake = _seeded_faker(122)
+    wb = new_workbook()
+    ws = wb.create_sheet("W-1")
+    # Section has start + end + data — but the DAY-row that the date capture
+    # targets is OMITTED. The block delimits fine; the capture has nothing
+    # to bind to.
+    orders = _mk_orders(fake, n=3, first_id=2200)
+    _write_daily_section(ws, day_label=None, orders=orders, write_end_anchor=True)
+
+    template = _block_template("blocks_capture_no_match_required")
+    expected = _envelope(
+        "blocks_capture_no_match_required",
+        # rows still emit — the capture surfaces a structural error AND the
+        # rows are extracted with `order_date: None`. Consumers that want a
+        # halt can set `allow_partial=False`.
+        orders=[{"order_date": None, **o} for o in orders],
+    )
+    expected_issues = [{"entity": "", "field": None, "reason": "capture_no_match"}]
+
+    return TestCase(
+        name="blocks_capture_no_match_required",
+        description="Block delimited cleanly, but the day-row the date capture targets is absent.",
+        workbook=wb,
+        template=template,
+        expected=expected,
+        expected_verdict="reject",
+        expected_issues=expected_issues,
+        notes="Required capture with zero matches inside the block instance fires `capture_no_match`.",
+    )
+
+
+def case_blocks_capture_multiple_matches_error() -> TestCase:
+    """Two date rows inside the same block instance with `on_multiple: error`.
+
+    Expected: a `capture_multiple_matches` structural error.
+    """
+    fake = _seeded_faker(123)
+    wb = new_workbook()
+    ws = wb.create_sheet("W-1")
+    orders = _mk_orders(fake, n=2, first_id=2300)
+    # Manually build a section with TWO DAY-rows so the capture has two hits.
+    _append_string_row(ws, [None, None, None, "ORDER SCHEDULE"])
+    _append_string_row(ws, [None, None, None, "DAY 4-13-2026"])
+    _append_string_row(ws, [None, None, None, "DAY 4-14-2026"])  # second, duplicated
+    _append_string_row(ws, ["ORDER_ID", "CUSTOMER", "QUANTITY"])
+    for o in orders:
+        ws.append([o["order_id"], o["customer"], o["quantity"]])
+    _append_string_row(ws, ["===="])
+
+    template = _block_template("blocks_capture_multiple_matches_error")
+    # Switch on_multiple to error for this capture.
+    template["blocks"][0]["captures"][0]["from"]["on_multiple"] = "error"
+    expected = _envelope(
+        "blocks_capture_multiple_matches_error",
+        orders=[{"order_date": None, **o} for o in orders],
+    )
+    expected_issues = [{"entity": "", "field": None, "reason": "capture_multiple_matches"}]
+
+    return TestCase(
+        name="blocks_capture_multiple_matches_error",
+        description="Block instance with two matching date rows and `on_multiple: error`.",
+        workbook=wb,
+        template=template,
+        expected=expected,
+        expected_verdict="reject",
+        expected_issues=expected_issues,
+        notes="Multiple captures + strict `on_multiple: error` halts the instance with a structural error.",
+    )
+
+
+def case_blocks_capture_wrong_type() -> TestCase:
+    """The captured value is unparseable as a date under any of `date_formats`.
+
+    Expected: a `wrong_type` row-level error on the capture.
+    """
+    fake = _seeded_faker(124)
+    wb = new_workbook()
+    ws = wb.create_sheet("W-1")
+    # Section with a date row whose body is not a valid M-D-YYYY date.
+    orders = _mk_orders(fake, n=2, first_id=2400)
+    _append_string_row(ws, [None, None, None, "ORDER SCHEDULE"])
+    _append_string_row(ws, [None, None, None, "DAY 99-99-9999"])  # captures via regex but fails coercion
+    _append_string_row(ws, ["ORDER_ID", "CUSTOMER", "QUANTITY"])
+    for o in orders:
+        ws.append([o["order_id"], o["customer"], o["quantity"]])
+    _append_string_row(ws, ["===="])
+
+    template = _block_template("blocks_capture_wrong_type")
+    expected = _envelope(
+        "blocks_capture_wrong_type",
+        orders=[
+            {"order_id": o["order_id"], "customer": o["customer"], "quantity": o["quantity"], "order_date": "99-99-9999"}
+            for o in orders
+        ],
+    )
+    expected_issues = [{"entity": "order_date", "field": "order_date", "reason": "wrong_type"}]
+
+    return TestCase(
+        name="blocks_capture_wrong_type",
+        description="Capture binds to a cell whose body matches the regex but doesn't coerce to a date.",
+        workbook=wb,
+        template=template,
+        expected=expected,
+        expected_verdict="needs_review",
+        expected_issues=expected_issues,
+        notes="The capture regex matched and the row was extracted, but the date string can't be parsed; `wrong_type` is surfaced.",
+    )
+
+
+# =====================================================================
 # Registry
 # =====================================================================
 
@@ -782,4 +1067,10 @@ ALL_CASES = [
     case_corrupted_wrong_type,
     case_corrupted_renamed_header,
     case_corrupted_below_minimum,
+    # blocks v2 — negative cases
+    case_blocks_starts_not_found,
+    case_blocks_unterminated,
+    case_blocks_capture_no_match_required,
+    case_blocks_capture_multiple_matches_error,
+    case_blocks_capture_wrong_type,
 ]

@@ -1,0 +1,10 @@
+{
+  "verdict": "reject",
+  "issues": [
+    {
+      "entity": "",
+      "field": null,
+      "reason": "block_starts_not_found"
+    }
+  ]
+}

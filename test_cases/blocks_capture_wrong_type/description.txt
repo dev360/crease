@@ -1,0 +1,1 @@
+Capture binds to a cell whose body matches the regex but doesn't coerce to a date.
