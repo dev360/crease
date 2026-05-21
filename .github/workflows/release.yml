@@ -48,7 +48,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install dependencies
-        run: uv sync --group dev
+        run: uv sync --locked --group dev
 
       - name: Release (tag + changelog + GitHub Release)
         id: release
@@ -60,10 +60,13 @@ jobs:
         # case build + publish below must be skipped, otherwise uv rebuilds
         # the existing version and PyPI 400s on "file already exists".
         run: |
-          OLD_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          set -euo pipefail
+          OLD_VERSION=$(uv version --short)
+          [ -n "$OLD_VERSION" ] || { echo "::error::OLD_VERSION is empty — failed to read project version"; exit 1; }
           uv run semantic-release version
           uv run semantic-release publish
-          NEW_VERSION=$(uv run python -c "import tomllib; print(tomllib.load(open('pyproject.toml','rb'))['project']['version'])")
+          NEW_VERSION=$(uv version --short)
+          [ -n "$NEW_VERSION" ] || { echo "::error::NEW_VERSION is empty — failed to read project version"; exit 1; }
           echo "old_version=$OLD_VERSION" >> "$GITHUB_OUTPUT"
           echo "new_version=$NEW_VERSION" >> "$GITHUB_OUTPUT"
           if [ "$OLD_VERSION" = "$NEW_VERSION" ]; then
@@ -82,4 +85,15 @@ jobs:
         if: steps.release.outputs.released == 'true'
         env:
           UV_PUBLISH_TOKEN: ${{ secrets.PYPI_TOKEN }}
-        run: uv publish
+        # Fail loudly if the secret was rotated/renamed and silently substituted
+        # with the empty string — otherwise `uv publish` would attempt the upload
+        # with no auth and surface as a confusing PyPI 4xx after the tag is public.
+        # `--check-url` makes re-runs idempotent: an already-uploaded file is
+        # treated as skipped instead of fatal.
+        run: |
+          set -euo pipefail
+          if [ -z "${UV_PUBLISH_TOKEN:-}" ]; then
+            echo "::error::PYPI_TOKEN secret is empty or unset"
+            exit 1
+          fi
+          uv publish --check-url https://pypi.org/simple/crease/
