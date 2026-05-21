@@ -451,6 +451,7 @@ except crease.ValidationError as e:
 | `duplicate_row` | Row identical to a previous one |
 | `anchor_not_found` | Anchored field's label text not present in tab. `ctx.label_was: "absent"`. |
 | `anchor_value_blank` | Anchored field's label is present but the value cell is blank. Informational; only fires on `nullable: true` fields. `ctx.label_was: "present"`. |
+| `anchor_value_type_mismatch` | Anchor's label matched but the neighbor cell's shape didn't fit `anchor.value_type`. Surfaces the case where the operator put the wrong thing next to the label. |
 | `header_duplicated` | `source_column` matches multiple header cells in the same row; bind picked the first. Set `source_column_index:` on the field to choose a specific occurrence (0-indexed across the matches). |
 | `header_above_nonblank` | The row immediately above `header_row` has non-blank text in a column that also has a header. Surfaces the case where the operator pointed at the bottom of a two-row header. The column geometry is in `ctx.columns`. |
 | `boolean_alias_unknown` | Value didn't match `true_values`/`false_values` |

@@ -26,7 +26,7 @@ Orientation = Literal["flat", "property_sheet", "anchored"]
 MatchMode = Literal["exact", "contains", "regex"]
 Direction = Literal["right", "below", "left", "above"]
 DataEndType = Literal["end_of_sheet", "blank_row", "value_match", "value_pattern", "skip_trailing_rows"]
-EnrichSource = Literal["tab_name", "tab_name_regex_group"]
+EnrichSource = Literal["tab_name", "tab_name_regex_group", "anchor"]
 Normalize = Literal["none", "trim", "lower", "trim_lower"]
 
 
@@ -54,6 +54,7 @@ class Anchor(BaseModel):
     offset: int = 1
     column: int | None = None  # restrict label search to a single column; None = any column
     nth: int = 1  # 1-indexed match to return when the label appears more than once
+    value_type: FieldType | None = None  # if set, neighbor must coerce to this type
 
 
 class DataEnd(BaseModel):
@@ -158,7 +159,17 @@ class Locate(BaseModel):
 
 
 class Enrich(BaseModel):
-    """Inject a field into extracted rows derived from the tab name."""
+    """Inject a field into extracted rows.
+
+    Sources:
+
+    - ``tab_name`` (default): use the tab's name verbatim.
+    - ``tab_name_regex_group``: pull a regex group from the tab name
+      (``Locate.tab_pattern`` provides the pattern).
+    - ``anchor``: locate a labeled cell elsewhere on the same tab and
+      use its neighbor's value. ``label_match`` / ``match_mode`` /
+      ``value_at`` / ``offset`` mirror ``Anchor``.
+    """
 
     model_config = ConfigDict(extra="forbid")
 
@@ -168,6 +179,12 @@ class Enrich(BaseModel):
     strip_prefix: str | None = None
     strip_suffix: str | None = None
     type: FieldType = "string"  # coerce the extracted value
+
+    # anchor source
+    label_match: str | None = None
+    match_mode: MatchMode = "contains"
+    value_at: Direction = "right"
+    offset: int = 1
 
 
 class FieldSpec(BaseModel):

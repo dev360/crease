@@ -227,6 +227,60 @@ A continuation row with `[None, None, "5-6", 50]` inherits `day` /
 `grower` from the row above; the moment a non-blank value appears, it
 becomes the new "last seen" value for that column.
 
+## Per-row enrichment from a labeled cell
+
+When a header block above the data carries a value that should be
+attached to every row (a projection date, a reporting period, a
+single-cell metadata block), declare it as an `enrich` entry with
+`source: anchor`:
+
+```yaml
+entities:
+  - name: placement
+    cardinality: many
+    locate:
+      tab: Sheet1
+      orientation: flat
+      header_row: 2
+    enrich:
+      - field: projected_hatch
+        source: anchor
+        label_match: "PROJECTED HATCH:"
+        value_at: right
+        offset: 1
+        type: date
+    fields:
+      - { name: farm, source_column: "farm", type: string }
+```
+
+`label_match` / `match_mode` / `value_at` / `offset` mirror the field-
+level `anchor` block. The matched neighbor value is coerced via
+`type:` (so a `date` cell projects to its ISO string, matching the
+rest of the canonical document).
+
+## Constraining the anchor's neighbor with `value_type`
+
+`anchor.value_type` adds a shape check on the matched cell that's
+distinct from the field's own `type` coerce: a `value_type` mismatch
+means the anchor pointed at the *wrong cell*, not that the value is
+the right cell shaped wrongly. The error code is
+`anchor_value_type_mismatch`.
+
+```yaml
+fields:
+  - name: project_id
+    type: integer
+    anchor:
+      label_match: "Project ID:"
+      value_at: right
+      offset: 1
+      value_type: integer
+```
+
+When the neighbor of `Project ID:` is a string like `"Quarterly Sample
+Plan"`, the report carries a single `anchor_value_type_mismatch`
+entry instead of the harder-to-route `wrong_type`.
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

@@ -35,6 +35,7 @@ from crease.template_model import (
     DataEnd,
     Enrich,
     Entity,
+    FieldSpec,
     LocateSkipRule,
     SkipRowRule,
     Template,
@@ -337,7 +338,12 @@ def _filename_inject(record: dict[str, Any], template: Template, source_file: st
     return record
 
 
-def _apply_enrich(record: dict[str, Any], enrich_list: list[Enrich], tab: TabMatch) -> dict[str, Any]:
+def _apply_enrich(
+    record: dict[str, Any],
+    enrich_list: list[Enrich],
+    tab: TabMatch,
+    grid: list[list[Any]] | None = None,
+) -> dict[str, Any]:
     for enrich in enrich_list:
         if enrich.source == "tab_name":
             raw = tab.name
@@ -349,6 +355,8 @@ def _apply_enrich(record: dict[str, Any], enrich_list: list[Enrich], tab: TabMat
                     raw = tab.regex_match.group(enrich.group)
                 except IndexError:
                     raw = None
+        elif enrich.source == "anchor" and grid is not None and enrich.label_match:
+            raw = _lookup_enrich_anchor(grid, enrich)
         else:
             raw = None
         if raw is not None and isinstance(raw, str):
@@ -356,8 +364,45 @@ def _apply_enrich(record: dict[str, Any], enrich_list: list[Enrich], tab: TabMat
                 raw = raw.removeprefix(enrich.strip_prefix)
             if enrich.strip_suffix:
                 raw = raw.removesuffix(enrich.strip_suffix)
+        if raw is not None and enrich.type != "string":
+            try:
+                raw = coerce(raw, FieldSpec(name=enrich.field, type=enrich.type))
+            except CoercionError:
+                pass  # leave as-is; downstream may still consume it
         record[enrich.field] = raw
     return record
+
+
+def _lookup_enrich_anchor(grid: list[list[Any]], enrich: Enrich) -> Any:
+    """Resolve an anchor-source enrich by locating its label and walking to the value cell."""
+    target = enrich.label_match or ""
+    mode = enrich.match_mode
+    for r, row in enumerate(grid):
+        for c, val in enumerate(row):
+            if val is None:
+                continue
+            s = str(val).strip()
+            if mode == "exact" and s != target:
+                continue
+            if mode == "contains" and target not in s:
+                continue
+            if mode == "regex" and not re.search(target, s):
+                continue
+            nr, nc = r, c
+            direction = enrich.value_at
+            offset = enrich.offset
+            if direction == "right":
+                nc += offset
+            elif direction == "left":
+                nc -= offset
+            elif direction == "below":
+                nr += offset
+            elif direction == "above":
+                nr -= offset
+            if 0 <= nr < len(grid) and 0 <= nc < len(grid[nr]):
+                return grid[nr][nc]
+            return None
+    return None
 
 
 # ---- flat orientation ----------------------------------------------------
@@ -751,7 +796,7 @@ def _extract_flat(
                     )
                 )
 
-        record = _apply_enrich(record, entity.enrich, tab)
+        record = _apply_enrich(record, entity.enrich, tab, grid=grid)
         record = _filename_inject(record, template, result.source_file)
         if extra_fields:
             # Captures from the enclosing block instance merge onto every
@@ -913,6 +958,26 @@ def _extract_anchored(
                     )
                 )
             continue
+        if f.anchor.value_type is not None:
+            # Shape check on the matched neighbor — distinct from the field's
+            # own type coerce: a value_type mismatch means the anchor pointed
+            # at the wrong cell, not that the value is the right cell shaped
+            # wrongly.
+            try:
+                coerce(raw, FieldSpec(name=f.name, type=f.anchor.value_type))
+            except CoercionError:
+                record[f.name] = None
+                result.row_errors.append(
+                    RowExtractError(
+                        entity=entity.name,
+                        row=0,
+                        field=f.name,
+                        reason="anchor_value_type_mismatch",
+                        expected=f.anchor.value_type,
+                        got=repr(raw),
+                    )
+                )
+                continue
         try:
             record[f.name] = coerce(raw, f)
         except CoercionError as e:
@@ -929,7 +994,7 @@ def _extract_anchored(
                 )
             )
 
-    record = _apply_enrich(record, entity.enrich, tab)
+    record = _apply_enrich(record, entity.enrich, tab, grid=grid)
     record = _filename_inject(record, template, result.source_file)
     return record
 
