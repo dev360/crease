@@ -319,13 +319,14 @@ uv run pre-commit run --all-files
 ```
 
 If you're not using uv, plain `pip` works fine against the venv of
-your choice:
+your choice. PEP 735 `[dependency-groups]` requires pip ≥ 25.1, so we
+install the dev/test tools by name instead:
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
-pip install -e ".[pandas]"           # editable install with the pandas extra
-pip install pytest faker             # test deps
+pip install -e ".[pandas]"                       # editable install with the pandas extra
+pip install pytest faker pre-commit ruff         # test + dev tools
 pytest
 ```
 
