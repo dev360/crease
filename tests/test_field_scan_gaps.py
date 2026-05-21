@@ -294,9 +294,7 @@ def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
     )
     result = extract(xlsx, tmpl)
     report = validate(result, tmpl)
-    assert any(
-        e.type == "header_above_nonblank" for e in report.errors()
-    ), "expected a header_above_nonblank warning"
+    assert any(e.type == "header_above_nonblank" for e in report.errors()), "expected a header_above_nonblank warning"
 
 
 # ======================================================================
@@ -419,8 +417,7 @@ def test_anchor_column_scopes_match_to_one_column(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="P1-1: Anchor.nth not yet implemented; cannot pick the Nth occurrence "
-    "of an ambiguous label.",
+    reason="P1-1: Anchor.nth not yet implemented; cannot pick the Nth occurrence " "of an ambiguous label.",
 )
 def test_anchor_nth_picks_second_match(tmp_path):
     """A label ``SHIPPING INFORMATION`` appears twice on the sheet (a header
@@ -508,9 +505,7 @@ def test_duplicate_source_column_warns_when_header_appears_twice(tmp_path):
     result = extract(xlsx, tmpl)
     report = validate(result, tmpl)
 
-    assert any(
-        e.type == "header_duplicated" for e in report.errors()
-    ), "expected header_duplicated warning"
+    assert any(e.type == "header_duplicated" for e in report.errors()), "expected header_duplicated warning"
 
 
 @pytest.mark.xfail(
@@ -695,8 +690,7 @@ def test_anchor_label_was_marks_label_presence(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="P1-5: Locate.cell_range exists in the model but the extractor doesn't "
-    "appear to gate rows/cols by it.",
+    reason="P1-5: Locate.cell_range exists in the model but the extractor doesn't " "appear to gate rows/cols by it.",
 )
 def test_cell_range_restricts_extraction_to_subrectangle(tmp_path):
     """One tab carries two unrelated tables in disjoint column ranges (cols
@@ -754,8 +748,7 @@ def test_cell_range_restricts_extraction_to_subrectangle(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="P2-1: null_patterns (regex) not yet implemented; null_tokens accepts "
-    "exact strings only.",
+    reason="P2-1: null_patterns (regex) not yet implemented; null_tokens accepts " "exact strings only.",
 )
 def test_null_patterns_match_unfilled_form_placeholders(tmp_path):
     """A regex ``^\\[.+\\]$`` should collapse any bracketed placeholder
@@ -1316,10 +1309,7 @@ def test_wrong_type_time_vs_datetime_emits_likely_cause(tmp_path):
     )
     result = extract(xlsx, tmpl)
     report = validate(result, tmpl)
-    matches = [
-        e for e in report.errors()
-        if e.type == "wrong_type" and e.loc[-1] == "ts"
-    ]
+    matches = [e for e in report.errors() if e.type == "wrong_type" and e.loc[-1] == "ts"]
     assert matches, "expected a wrong_type error on ts"
     assert matches[0].ctx.get("likely_cause") == "excel_time_only_cell"
 

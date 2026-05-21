@@ -80,10 +80,7 @@ def _run(src: Path, yml_body: str, tmp_path: Path):
 def test_csv_basic_read_via_source_csv(tmp_path):
     csv_path = _csv(
         tmp_path,
-        "customer,qty,amount\n"
-        "Acme Co.,5,100\n"
-        "Globex Corp,3,60\n"
-        "Hooli Inc.,7,140\n",
+        "customer,qty,amount\n" "Acme Co.,5,100\n" "Globex Corp,3,60\n" "Hooli Inc.,7,140\n",
     )
     result = _run(
         csv_path,
@@ -120,8 +117,7 @@ def test_csv_basic_read_via_source_csv(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="CSV-2: number_format: thousands not yet implemented; "
-    "string '25,500' won't coerce to integer 25500.",
+    reason="CSV-2: number_format: thousands not yet implemented; " "string '25,500' won't coerce to integer 25500.",
 )
 def test_csv_number_format_thousands_strips_commas(tmp_path):
     """``number_format: thousands`` on an integer/number field should strip
@@ -130,8 +126,8 @@ def test_csv_number_format_thousands_strips_commas(tmp_path):
     csv_path = _csv(
         tmp_path,
         "site,head_placed\n"
-        "Site-A,\"25,500\"\n"
-        "Site-B,\"265,600\"\n"
+        'Site-A,"25,500"\n'
+        'Site-B,"265,600"\n'
         "Site-C,1000\n",  # mixed: some rows have separators, some don't
     )
     result = _run(
@@ -165,7 +161,7 @@ def test_csv_thousands_separator_fails_loudly_without_opt_in(tmp_path):
     """If the operator forgets ``number_format: thousands``, the field
     should fail with ``wrong_type`` and ``ctx.likely_cause:
     csv_thousands_separator`` so they know exactly what to fix."""
-    csv_path = _csv(tmp_path, "site,head\nSite-A,\"25,500\"\n")
+    csv_path = _csv(tmp_path, 'site,head\nSite-A,"25,500"\n')
     tmpl = _load(
         tmp_path,
         """
@@ -185,10 +181,7 @@ def test_csv_thousands_separator_fails_loudly_without_opt_in(tmp_path):
     )
     result = extract(csv_path, tmpl)
     report = validate(result, tmpl)
-    matches = [
-        e for e in report.errors()
-        if e.type == "wrong_type" and e.loc[-1] == "head"
-    ]
+    matches = [e for e in report.errors() if e.type == "wrong_type" and e.loc[-1] == "head"]
     assert matches and matches[0].ctx.get("likely_cause") == "csv_thousands_separator"
 
 
@@ -199,8 +192,7 @@ def test_csv_thousands_separator_fails_loudly_without_opt_in(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="CSV-3: number_format: percent not yet implemented; "
-    "string '73.3%' won't coerce.",
+    reason="CSV-3: number_format: percent not yet implemented; " "string '73.3%' won't coerce.",
 )
 def test_csv_number_format_percent_strips_percent_sign(tmp_path):
     """Two flavors: ``percent`` (string ``"73.3%"`` → 73.3 as a number, leave
@@ -209,10 +201,7 @@ def test_csv_number_format_percent_strips_percent_sign(tmp_path):
     """
     csv_path = _csv(
         tmp_path,
-        "site,saleable_pct\n"
-        "Site-A,73.3%\n"
-        "Site-B,81.0%\n"
-        "Site-C,100%\n",
+        "site,saleable_pct\n" "Site-A,73.3%\n" "Site-B,81.0%\n" "Site-C,100%\n",
     )
     result = _run(
         csv_path,
@@ -293,9 +282,7 @@ def test_csv_auto_detects_semicolon_delimiter(tmp_path):
     """
     csv_path = _csv(
         tmp_path,
-        "customer;qty;amount\n"
-        "Acme Co.;5;100\n"
-        "Globex Corp;3;60\n",
+        "customer;qty;amount\n" "Acme Co.;5;100\n" "Globex Corp;3;60\n",
         name="semi.csv",
     )
     result = _run(
@@ -332,8 +319,7 @@ def test_csv_explicit_tab_delimiter(tmp_path):
     """Explicit ``delimiter: \"\\t\"`` for a TSV-style file."""
     csv_path = _csv(
         tmp_path,
-        "customer\tqty\tamount\n"
-        "Acme Co.\t5\t100\n",
+        "customer\tqty\tamount\n" "Acme Co.\t5\t100\n",
         name="tabbed.csv",
     )
     result = _run(
@@ -368,8 +354,7 @@ def test_csv_explicit_tab_delimiter(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="CSV-6: quoted multi-line cell handling not yet implemented; "
-    "naive line splitting would break.",
+    reason="CSV-6: quoted multi-line cell handling not yet implemented; " "naive line splitting would break.",
 )
 def test_csv_embedded_newlines_in_quoted_cells(tmp_path):
     """A free-text cell with an embedded newline (``"line1\\nline2"``) must
@@ -378,9 +363,7 @@ def test_csv_embedded_newlines_in_quoted_cells(tmp_path):
     """
     csv_path = _csv(
         tmp_path,
-        'sample,comments\n'
-        'S-001,"line one\nline two"\n'
-        'S-002,"single line"\n',
+        "sample,comments\n" 'S-001,"line one\nline two"\n' 'S-002,"single line"\n',
     )
     result = _run(
         csv_path,
@@ -423,7 +406,7 @@ def test_csv_encoding_auto_falls_back_to_windows_1252(tmp_path):
     # A cell value with a Windows-1252-only character: 0x92 is the
     # "right single quotation mark" (curly apostrophe) in cp1252, not
     # valid UTF-8 by itself.
-    raw = b'customer,note\nAcme Co.,it\x92s fine\nGlobex Corp,plain\n'
+    raw = b"customer,note\nAcme Co.,it\x92s fine\nGlobex Corp,plain\n"
     csv_path = _csv(tmp_path, raw, name="windows.csv")
     result = _run(
         csv_path,
@@ -452,11 +435,10 @@ def test_csv_encoding_auto_falls_back_to_windows_1252(tmp_path):
 
 @pytest.mark.xfail(
     strict=True,
-    reason="CSV-7b: explicit encoding override (e.g. encoding: 'windows-1252') "
-    "not yet implemented.",
+    reason="CSV-7b: explicit encoding override (e.g. encoding: 'windows-1252') " "not yet implemented.",
 )
 def test_csv_explicit_encoding_windows_1252(tmp_path):
-    raw = b'customer,note\nAcme Co.,it\x92s fine\n'
+    raw = b"customer,note\nAcme Co.,it\x92s fine\n"
     csv_path = _csv(tmp_path, raw, name="forced.csv")
     result = _run(
         csv_path,
