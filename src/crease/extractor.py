@@ -477,17 +477,44 @@ def _extract_flat(
     if separator_rows:
         data_rows = _apply_separator_rows(data_rows, separator_rows, cell_range)
 
-    # Map field → header column index
+    # Map header → all column indices that carry it. Duplicates are kept
+    # so we can either disambiguate with source_column_index or emit a
+    # header_duplicated warning when a field binds without one.
+    header_to_cols: dict[str, list[int]] = {}
+    for col_idx, h in enumerate(headers):
+        if h == "":
+            continue
+        header_to_cols.setdefault(h, []).append(col_idx)
+
     field_to_col: dict[str, int] = {}
     missing_columns: list[str] = []
     for f in entity.fields:
         if f.source_column is None:
             continue
         wanted = normalize_header(f.source_column)
-        try:
-            field_to_col[f.name] = headers.index(wanted)
-        except ValueError:
+        matches = header_to_cols.get(wanted, [])
+        if not matches:
             missing_columns.append(f.source_column)
+            continue
+        if f.source_column_index is not None:
+            if 0 <= f.source_column_index < len(matches):
+                field_to_col[f.name] = matches[f.source_column_index]
+            else:
+                missing_columns.append(f.source_column)
+            continue
+        if len(matches) > 1:
+            result.errors.append(
+                ExtractionError(
+                    entity=entity.name,
+                    reason="header_duplicated",
+                    details={
+                        "field": f.name,
+                        "source_column": f.source_column,
+                        "columns": list(matches),
+                    },
+                )
+            )
+        field_to_col[f.name] = matches[0]
 
     if missing_columns:
         result.errors.append(
