@@ -1,4 +1,12 @@
 
+## v1.1.0 (2026-05-21)
+
+- docs: announce multi-format reads and the engine= kwarg ([`cf67c25`](https://github.com/dev360/crease/commit/cf67c25251b587c23a686487e72044cf4ede35de))
+- docs: clarify backend divergence and align engine= kwarg coverage ([`cf67c25`](https://github.com/dev360/crease/commit/cf67c25251b587c23a686487e72044cf4ede35de))
+- docs: update README local-dev section from Poetry to uv ([`963ead1`](https://github.com/dev360/crease/commit/963ead1b81dcbfe40dd44ac76394e5ab1276de58))
+- docs(readme): list dev tools in plain-pip fallback ([`963ead1`](https://github.com/dev360/crease/commit/963ead1b81dcbfe40dd44ac76394e5ab1276de58))
+- docs: promote project status from alpha to 1.0 (#15) ([`6fa512c`](https://github.com/dev360/crease/commit/6fa512ce2d73ace0a8208bd74deeb7ea26974360))
+
 ## v1.0.0 (2026-05-20)
 
 - docs: add link to docs site at top of README ([`3738ce6`](https://github.com/dev360/crease/commit/3738ce6332c619a881ca2b2a65f14e35a587b3ef))
