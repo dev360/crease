@@ -33,3 +33,17 @@ with crease.open("big.xlsx", template) as session:
     internally and yield from it. True row-by-row streaming via openpyxl's
     read-only mode is a follow-on once the eager extraction path is
     proven.
+
+## Streaming `blocks:`-scoped entities
+
+When an entity targets a [`blocks:`](blocks.md) declaration, the
+streamer cannot emit a row until that row's block instance has been
+delimited and its captures resolved — every row carries the merged
+captures from its enclosing instance. The practical impact: rows are
+buffered per block instance, then drained in source order. For a tab
+with N instances, latency to the **first** yielded row is one
+instance's worth of scanning; thereafter it's effectively row-by-row.
+
+The output shape is identical to the materialised path —
+`extract(...).canonical["orders"]` and `list(stream(..., entity="order"))`
+produce the same dicts in the same order.

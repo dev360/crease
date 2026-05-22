@@ -41,6 +41,7 @@ nav:
   - Guides:
       - guides/templates.md
       - guides/layouts.md
+      - guides/blocks.md
       - guides/streaming.md
       - guides/pydantic-projection.md
       - guides/pandas-projection.md

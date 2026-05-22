@@ -1,0 +1,74 @@
+{
+  "deliveries": [
+    {
+      "store_name": "BAGEL STREET CAFE",
+      "dock_num": 1,
+      "units": 1200,
+      "depot": "ACME DEPOT",
+      "lane_sqft": 800,
+      "chilled_or_ambient": "CHILLED",
+      "delivery_date": "2026-04-13",
+      "day_of_week": "MONDAY"
+    },
+    {
+      "store_name": "BAGEL STREET CAFE",
+      "dock_num": 2,
+      "units": 1200,
+      "depot": "ACME DEPOT",
+      "lane_sqft": 800,
+      "chilled_or_ambient": "CHILLED",
+      "delivery_date": "2026-04-13",
+      "day_of_week": "MONDAY"
+    },
+    {
+      "store_name": "SOURDOUGH SQUARE",
+      "dock_num": 1,
+      "units": 1100,
+      "depot": "ACME DEPOT",
+      "lane_sqft": 750,
+      "chilled_or_ambient": "AMBIENT",
+      "delivery_date": "2026-04-13",
+      "day_of_week": "MONDAY"
+    },
+    {
+      "store_name": "MAIN STREET CAFE",
+      "dock_num": 1,
+      "units": 800,
+      "depot": "GLOBEX DEPOT",
+      "lane_sqft": 600,
+      "chilled_or_ambient": "CHILLED",
+      "delivery_date": "2026-04-13",
+      "day_of_week": "MONDAY"
+    },
+    {
+      "store_name": "MAIN STREET CAFE",
+      "dock_num": 2,
+      "units": 700,
+      "depot": "GLOBEX DEPOT",
+      "lane_sqft": 600,
+      "chilled_or_ambient": "CHILLED",
+      "delivery_date": "2026-04-13",
+      "day_of_week": "MONDAY"
+    },
+    {
+      "store_name": "RYE & SHINE",
+      "dock_num": 1,
+      "units": 1000,
+      "depot": "ACME DEPOT",
+      "lane_sqft": 700,
+      "chilled_or_ambient": "AMBIENT",
+      "delivery_date": "2026-04-14",
+      "day_of_week": "TUESDAY"
+    },
+    {
+      "store_name": "RYE & SHINE",
+      "dock_num": 2,
+      "units": 900,
+      "depot": "ACME DEPOT",
+      "lane_sqft": 700,
+      "chilled_or_ambient": "AMBIENT",
+      "delivery_date": "2026-04-14",
+      "day_of_week": "TUESDAY"
+    }
+  ]
+}

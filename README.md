@@ -203,6 +203,49 @@ with crease.open("incoming.xlsx", template) as session:
 
 ---
 
+## Repeating sections within one tab
+
+Some reports pack multiple sub-sections into a single tab — a weekly
+schedule with one sub-table per day, separated by a `=====` row or a
+recurring title. The `blocks:` grammar (template `version: 2`) lets you
+declare the repeating region once, anchor each instance with start /
+end patterns, and capture per-section metadata that gets merged onto
+every row in that section:
+
+```yaml
+template_id: weekly_orders
+version: 2
+
+blocks:
+  - name: daily_section
+    tab_pattern: ^W-\d+$
+    starts_at: { column: D, cell_pattern: ^ORDER SCHEDULE$ }
+    ends_at:   { column: A, cell_pattern: ^={3,}$ }
+    captures:
+      - field: order_date
+        from: { column: D, cell_pattern: ^DAY (\d+-\d+-\d+)$, regex_group: 1 }
+        type: date
+        date_formats: ['%m-%d-%Y']
+
+entities:
+  - name: order
+    block: daily_section                # ← scope this entity to each block instance
+    cardinality: many
+    locate:
+      orientation: flat
+      header_anchor: { text: ORDER_ID, match_mode: exact }
+    fields:
+      - { name: order_id, source_column: ORDER_ID, type: string, pattern: ^ORD-\d{4}$ }
+      - { name: customer, source_column: CUSTOMER, type: string }
+      - { name: quantity, source_column: QUANTITY, type: integer, minimum: 1 }
+```
+
+Output is flat — `order_date` from each section's DAY-row is merged
+onto every order row from that section. See
+[Repeating sections](docs/guides/blocks.md) for the full grammar.
+
+---
+
 ## Scattered metadata (anchored layout)
 
 Some cover sheets sprinkle properties at irregular positions. Anchor each

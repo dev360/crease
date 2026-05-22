@@ -210,6 +210,11 @@ def _structural_msg(reason: str) -> str:
         "multiple_rows_for_cardinality_one": "Cardinality 'one' entity returned multiple rows",
         "column_count_mismatch": "Header row has the wrong number of columns",
         "unsupported_orientation": "Template specifies an unsupported orientation",
+        "block_starts_not_found": "Block's starts_at anchor did not match any cell in the tab",
+        "block_unterminated": "Block's ends_at anchor did not match before the next starts_at or EOF",
+        "capture_no_match": "Capture's `from` pattern matched zero cells in the block instance",
+        "capture_multiple_matches": "Capture's `from` pattern matched multiple cells in the block instance and on_multiple=error",
+        "block_ref_not_found": "Entity references a block name that is not declared in the template",
     }.get(reason, f"Structural problem: {reason}")
 
 

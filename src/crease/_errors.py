@@ -31,6 +31,12 @@ STRUCTURAL_TYPES: frozenset[str] = frozenset(
         "multiple_rows_for_cardinality_one",
         "column_count_mismatch",
         "unsupported_orientation",
+        # blocks v2
+        "block_starts_not_found",
+        "block_unterminated",
+        "capture_no_match",
+        "capture_multiple_matches",
+        "block_ref_not_found",
     }
 )
 

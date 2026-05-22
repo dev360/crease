@@ -1,0 +1,47 @@
+template_id: blocks_capture_no_match_required
+version: 2
+description: Weekly order schedule with daily sections delimited by anchors.
+blocks:
+- name: daily_section
+  tab_pattern: ^W-\d+$
+  starts_at:
+    column: D
+    cell_pattern: ^ORDER SCHEDULE$
+  ends_at:
+    column: A
+    cell_pattern: ^={3,}$
+  separator_rows:
+  - column: A
+    cell_pattern: ^={3,}$
+  - column: A
+    match_blank: true
+  captures:
+  - field: order_date
+    from:
+      column: D
+      cell_pattern: ^DAY (\d+-\d+-\d+)$
+      regex_group: 1
+    type: date
+    date_formats:
+    - '%m-%d-%Y'
+entities:
+- name: order
+  block: daily_section
+  cardinality: many
+  locate:
+    orientation: flat
+    header_anchor:
+      text: ORDER_ID
+      match_mode: exact
+  fields:
+  - name: order_id
+    source_column: ORDER_ID
+    type: string
+    pattern: ^ORD-\d{4}$
+  - name: customer
+    source_column: CUSTOMER
+    type: string
+  - name: quantity
+    source_column: QUANTITY
+    type: integer
+    minimum: 1

@@ -1,0 +1,19 @@
+{
+  "template_id": "blocks_capture_wrong_type",
+  "source_file": "input.xlsx",
+  "errors": [],
+  "orders": [
+    {
+      "order_id": "ORD-2400",
+      "customer": "Kelley-Thompson",
+      "quantity": 18,
+      "order_date": "99-99-9999"
+    },
+    {
+      "order_id": "ORD-2401",
+      "customer": "Butler LLC",
+      "quantity": 36,
+      "order_date": "99-99-9999"
+    }
+  ]
+}
