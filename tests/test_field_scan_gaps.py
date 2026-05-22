@@ -356,11 +356,6 @@ def test_header_normalization_collapses_double_spaces(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-1: Anchor.column not yet implemented; duplicated labels in side-by-side "
-    "blocks always match the first occurrence.",
-)
 def test_anchor_column_scopes_match_to_one_column(tmp_path):
     """Two side-by-side blocks (REPORTING in col A, BILLING in col D) carry
     the same labels. ``anchor.column: 3`` should restrict the search to the
@@ -379,6 +374,7 @@ def test_anchor_column_scopes_match_to_one_column(tmp_path):
         """
         template_id: anchor_column_scope
         version: 1
+        description: P1-1 fixture - anchor.column scopes label search
         entities:
           - name: cover
             cardinality: one
@@ -400,10 +396,6 @@ def test_anchor_column_scopes_match_to_one_column(tmp_path):
     assert result.canonical["cover"]["billing_company"] == "Globex Corp"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-1: Anchor.nth not yet implemented; cannot pick the Nth occurrence " "of an ambiguous label.",
-)
 def test_anchor_nth_picks_second_match(tmp_path):
     """A label ``SHIPPING INFORMATION`` appears twice on the sheet (a header
     label at row 0 and a sub-section label at row 4). ``nth: 2`` should pick
@@ -424,6 +416,7 @@ def test_anchor_nth_picks_second_match(tmp_path):
         """
         template_id: anchor_nth
         version: 1
+        description: P1-1 fixture - anchor.nth picks second match
         entities:
           - name: cover
             cardinality: one
