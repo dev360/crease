@@ -105,6 +105,34 @@ by OR across rules. `value_pattern` is a regex full-matched against the
 stringified cell value; combine it with `column:` to pin a single
 column.
 
+## Disambiguating anchored labels
+
+When a worksheet stacks two cover-sheet-style blocks side by side and
+both carry the same labels (a "REPORTING" block in column A and a
+"BILLING" block in column D, each with its own `Company:` /
+`Email:` rows), an `anchor` whose `label_match: "Company:"` would
+default to the first hit. Two optional fields scope the search:
+
+- `column: int` — restrict the scan to a single 0-indexed column.
+- `nth: int` — pick the Nth match (1-indexed; default 1).
+
+```yaml
+fields:
+  - name: reporting_company
+    type: string
+    anchor: { label_match: "Company:", column: 0, value_at: right, offset: 1 }
+  - name: billing_company
+    type: string
+    anchor: { label_match: "Company:", column: 3, value_at: right, offset: 1 }
+  - name: section_two_carrier
+    type: string
+    anchor:
+      label_match: "SHIPPING INFORMATION"
+      nth: 2                # the second occurrence of the label
+      value_at: right
+      offset: 2
+```
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

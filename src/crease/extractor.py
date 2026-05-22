@@ -866,16 +866,26 @@ def _extract_anchored(
 def _find_anchor(grid: list[list[Any]], anchor) -> tuple[int, int] | None:
     target = anchor.label_match
     mode = anchor.match_mode
+    pinned_col = anchor.column
+    nth = max(1, anchor.nth)
+    seen = 0
     for r, row in enumerate(grid):
         for c, val in enumerate(row):
+            if pinned_col is not None and c != pinned_col:
+                continue
             if val is None:
                 continue
             s = str(val).strip()
             if mode == "exact" and s == target:
-                return (r, c)
-            if mode == "contains" and target in s:
-                return (r, c)
-            if mode == "regex" and re.search(target, s):
+                pass
+            elif mode == "contains" and target in s:
+                pass
+            elif mode == "regex" and re.search(target, s):
+                pass
+            else:
+                continue
+            seen += 1
+            if seen == nth:
                 return (r, c)
     return None
 
