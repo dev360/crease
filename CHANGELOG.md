@@ -1,54 +1,13 @@
 
-## v1.13.0 (2026-05-22)
+## v2.0.0 (2026-05-22)
 
-
-## v1.12.0 (2026-05-22)
-
-
-## v1.11.0 (2026-05-22)
-
-
-## v1.10.0 (2026-05-22)
-
-
-## v1.9.0 (2026-05-22)
-
-
-## v1.8.0 (2026-05-22)
-
-
-## v1.7.0 (2026-05-22)
-
-
-## v1.6.0 (2026-05-22)
-
-
-## v1.5.0 (2026-05-22)
-
-
-## v1.4.0 (2026-05-22)
-
-
-## v1.3.0 (2026-05-22)
-
-
-## v1.2.0 (2026-05-22)
-
-- docs(blocks): grammar guide, errors taxonomy, README bullet, nav entry ([`7126a3a`](https://github.com/dev360/crease/commit/7126a3abd5ad7bbe04c4c31e84981ff92f8ddb04))
-
-## v1.1.2 (2026-05-21)
-
-
-## v1.1.1 (2026-05-21)
-
-
-## v1.1.0 (2026-05-21)
-
-- docs: announce multi-format reads and the engine= kwarg ([`cf67c25`](https://github.com/dev360/crease/commit/cf67c25251b587c23a686487e72044cf4ede35de))
-- docs: clarify backend divergence and align engine= kwarg coverage ([`cf67c25`](https://github.com/dev360/crease/commit/cf67c25251b587c23a686487e72044cf4ede35de))
-- docs: update README local-dev section from Poetry to uv ([`963ead1`](https://github.com/dev360/crease/commit/963ead1b81dcbfe40dd44ac76394e5ab1276de58))
-- docs(readme): list dev tools in plain-pip fallback ([`963ead1`](https://github.com/dev360/crease/commit/963ead1b81dcbfe40dd44ac76394e5ab1276de58))
-- docs: promote project status from alpha to 1.0 (#15) ([`6fa512c`](https://github.com/dev360/crease/commit/6fa512ce2d73ace0a8208bd74deeb7ea26974360))
+- docs: rewrite examples and fixtures with generic, neutral vocabulary (#38) ([`a72ed4c`](https://github.com/dev360/crease/commit/a72ed4caac11f5689d074e989678c1b49909d85b))
+- docs(blocks): grammar guide, errors taxonomy, README bullet, nav entry ([`b39359e`](https://github.com/dev360/crease/commit/b39359e5cba01b17636c00d18c2bddf86abe77d7))
+- docs: announce multi-format reads and the engine= kwarg ([`5a30d8f`](https://github.com/dev360/crease/commit/5a30d8fe0e4b4b0e93e2101e51c91aa18c4a88b0))
+- docs: clarify backend divergence and align engine= kwarg coverage ([`5a30d8f`](https://github.com/dev360/crease/commit/5a30d8fe0e4b4b0e93e2101e51c91aa18c4a88b0))
+- docs: update README local-dev section from Poetry to uv ([`cae7839`](https://github.com/dev360/crease/commit/cae7839508adb7c16fda7bcf32415cdfcb4295fe))
+- docs(readme): list dev tools in plain-pip fallback ([`cae7839`](https://github.com/dev360/crease/commit/cae7839508adb7c16fda7bcf32415cdfcb4295fe))
+- docs: promote project status from alpha to 1.0 (#15) ([`f868d38`](https://github.com/dev360/crease/commit/f868d38fa9d2afcafe235ef0d37ed24b30a3a839))
 
 ## v1.0.0 (2026-05-20)
 
