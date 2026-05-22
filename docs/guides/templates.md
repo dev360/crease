@@ -72,6 +72,39 @@ fields:
 Without `source_column_index`, both fields would bind to the same column
 and `report.errors()` would contain a `header_duplicated` entry.
 
+## Skipping rows during extraction
+
+When a worksheet interleaves data with marker, subtotal, or grand-total
+rows that have the same column geometry as real records, use
+`locate.skip_row_if` to drop them before extraction. Each list entry is
+a `LocateSkipRule`; if any one matches, the row is silently omitted
+from the canonical output (no row error). This is the top-level Locate
+filter; it is distinct from the block-scoped `SkipRowRule` (which uses
+single-column patterns inside a block instance, see
+[blocks](blocks.md)).
+
+```yaml
+locate:
+  tab: Orders
+  orientation: flat
+  header_row: 0
+  skip_row_if:
+    # subtotal rows: blank discriminator column
+    - all_blank: [customer]
+    # day-of-week marker rows
+    - column: label
+      value_pattern: "^(MONDAY|TUESDAY|WEDNESDAY|THURSDAY|FRIDAY|SATURDAY|SUNDAY)$"
+    # grand-total row: blank discriminator AND populated total
+    - all_blank: [site]
+      non_blank: [head_count]
+```
+
+Predicates compose by AND on the same rule (a rule with both
+`all_blank` and `non_blank` matches when both lists are satisfied) and
+by OR across rules. `value_pattern` is a regex full-matched against the
+stringified cell value; combine it with `column:` to pin a single
+column.
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

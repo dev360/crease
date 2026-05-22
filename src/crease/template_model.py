@@ -82,6 +82,32 @@ class FilenameCapture(BaseModel):
     type: FieldType = "string"
 
 
+class LocateSkipRule(BaseModel):
+    """One predicate for ``Locate.skip_row_if``.
+
+    Distinct from the block-scoped ``SkipRowRule`` (which filters rows
+    inside a single block instance by single-column pattern). This
+    rule operates on top-level Locate extraction and supports
+    multi-column predicates:
+
+    - ``all_blank``: every listed column must be blank on the row.
+    - ``non_blank``: every listed column must carry a non-blank value.
+    - ``column`` + ``value_pattern``: that column's stringified value
+      must fully match the regex.
+
+    Combine fields on the same rule for AND semantics (e.g. blank
+    discriminator AND populated totals column). Use multiple rules in
+    the list for OR semantics across distinct shapes.
+    """
+
+    model_config = ConfigDict(extra="forbid")
+
+    all_blank: list[str] | None = None
+    non_blank: list[str] | None = None
+    column: str | None = None
+    value_pattern: str | None = None  # regex; full-match
+
+
 class Locate(BaseModel):
     """Where (and how) to find an entity's data."""
 
@@ -101,6 +127,7 @@ class Locate(BaseModel):
     header_anchor: HeaderAnchor | None = None
     data_starts_row: int | None = None
     data_ends_at: DataEnd | None = None
+    skip_row_if: list[LocateSkipRule] = []
 
     # property_sheet
     label_col: int = 0

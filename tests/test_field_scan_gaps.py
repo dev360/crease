@@ -75,10 +75,6 @@ def _run(xlsx: Path, yml_body: str, tmp_path: Path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P0-2: skip_row_if not yet implemented (CONVENTIONS §6).",
-)
 def test_skip_row_if_drops_subtotal_rows(tmp_path):
     """Subtotal rows with a blank discriminator column should be filtered out."""
 
@@ -122,10 +118,6 @@ def test_skip_row_if_drops_subtotal_rows(tmp_path):
     }
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P0-2: skip_row_if value_pattern not yet implemented.",
-)
 def test_skip_row_if_drops_day_of_week_marker_rows(tmp_path):
     """Day-of-week marker rows (col 0 = MONDAY|TUESDAY|...) should be dropped."""
 
@@ -144,6 +136,7 @@ def test_skip_row_if_drops_day_of_week_marker_rows(tmp_path):
         """
         template_id: skip_row_if_day_markers
         version: 1
+        description: P0-2 fixture - drop day-of-week marker rows
         entities:
           - name: delivery
             cardinality: many
@@ -164,11 +157,6 @@ def test_skip_row_if_drops_day_of_week_marker_rows(tmp_path):
     assert len(result.canonical["deliveries"]) == 3
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P0-2: compound predicate (all_blank + non_blank) not yet implemented; "
-    "needed for the 'grand total' row that has same column geometry as data rows.",
-)
 def test_skip_row_if_drops_grand_total_with_compound_predicate(tmp_path):
     """A grand-total row has blank discriminator AND populated numeric column —
     geometrically identical to a real row except for the discriminator.
@@ -188,6 +176,7 @@ def test_skip_row_if_drops_grand_total_with_compound_predicate(tmp_path):
         """
         template_id: skip_row_if_grand_total
         version: 1
+        description: P0-2 fixture - drop grand-total compound predicate
         entities:
           - name: site_count
             cardinality: many
