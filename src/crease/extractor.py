@@ -55,10 +55,11 @@ class RowExtractError:
     entity: str
     row: int
     field: str
-    reason: str  # "wrong_type" | "missing_required" | "anchor_not_found"
+    reason: str  # "wrong_type" | "missing_required" | "anchor_not_found" | "anchor_value_blank"
     expected: str | None = None
     got: Any = None
     likely_cause: str | None = None
+    label_was: str | None = None  # "present" | "absent" for anchored failures
 
 
 @dataclass
@@ -821,6 +822,7 @@ def _extract_anchored(
                     field=f.name,
                     reason="anchor_not_found",
                     expected=f.anchor.label_match,
+                    label_was="absent",
                 )
             )
             continue
@@ -831,7 +833,22 @@ def _extract_anchored(
         raw = normalize_value(raw, f.normalize)
         if raw is None:
             record[f.name] = None
-            if not f.nullable:
+            if f.nullable:
+                # Label was there; the value just wasn't filled in. Surface
+                # as an informational warning so the report still tells the
+                # operator about the empty slot — distinct from the harder
+                # "label entirely missing" failure mode.
+                result.row_errors.append(
+                    RowExtractError(
+                        entity=entity.name,
+                        row=0,
+                        field=f.name,
+                        reason="anchor_value_blank",
+                        expected=f.type,
+                        label_was="present",
+                    )
+                )
+            else:
                 result.row_errors.append(
                     RowExtractError(
                         entity=entity.name,
@@ -839,6 +856,7 @@ def _extract_anchored(
                         field=f.name,
                         reason="missing_required",
                         expected=f.type,
+                        label_was="present",
                     )
                 )
             continue

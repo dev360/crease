@@ -167,6 +167,8 @@ def validate(result: ExtractResult, template: Template) -> Report:
             ctx["likely_cause"] = re_err.likely_cause
         if re_err.expected:
             ctx["expected"] = re_err.expected
+        if re_err.label_was:
+            ctx["label_was"] = re_err.label_was
         errors.append(
             Error(
                 type=re_err.reason,
@@ -227,6 +229,8 @@ def _row_msg(reason: str, field: str | None, expected: str | None) -> str:
         return f"Field '{field}' could not be coerced to {expected}"
     if reason == "anchor_not_found":
         return f"Field '{field}' could not be located by its anchor"
+    if reason == "anchor_value_blank":
+        return f"Field '{field}' has a label but its value cell is blank"
     return f"Field '{field}': {reason}"
 
 
