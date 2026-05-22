@@ -162,6 +162,12 @@ def coerce(value: Any, field: FieldSpec) -> Any:
         raise CoercionError(value, "boolean")
 
     if t in ("date", "datetime"):
+        if isinstance(value, dt.time) and not isinstance(value, dt.datetime):
+            # Excel time-only cells (no date part) come through as dt.time;
+            # operator probably meant a full timestamp, mirror the
+            # excel_autoconvert pattern so the report tells them which way
+            # the type pun went.
+            raise CoercionError(value=value, expected=t, likely_cause="excel_time_only_cell")
         if isinstance(value, dt.datetime):
             return value.date().isoformat() if t == "date" else value.isoformat()
         if isinstance(value, dt.date):

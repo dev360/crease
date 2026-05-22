@@ -55,10 +55,17 @@ def parse_cell_range(s: str) -> CellRange:
 
 def find_tabs(workbook: Workbook, locate: Locate, ignore_tabs: list[str]) -> list[TabMatch]:
     """Return all worksheets matching this locate spec."""
+    candidates = [ws for ws in workbook.sheets if ws.name not in ignore_tabs]
+    # ``tab: only`` is a sentinel for single-data-tab workbooks where the
+    # tab's name varies per file (operators often name it the date). Bind
+    # to the lone non-ignored sheet regardless of its name.
+    if locate.tab == "only":
+        if len(candidates) == 1:
+            ws = candidates[0]
+            return [TabMatch(worksheet=ws, name=ws.name, regex_match=None)]
+        return []
     matches: list[TabMatch] = []
-    for ws in workbook.sheets:
-        if ws.name in ignore_tabs:
-            continue
+    for ws in candidates:
         if locate.tab is not None and ws.name == locate.tab:
             matches.append(TabMatch(worksheet=ws, name=ws.name, regex_match=None))
         elif locate.tab_pattern is not None:

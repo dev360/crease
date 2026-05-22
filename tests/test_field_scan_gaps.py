@@ -988,11 +988,6 @@ def test_classify_reports_low_confidence_on_unfit_file(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-7: header_row indexing diverges from python_calamine's default "
-    "to_python() view when leading blank rows are present.",
-)
 def test_header_row_indexing_matches_repl_view_with_leading_blanks(tmp_path):
     """A workbook whose first row is blank: ``header_row: 1`` (the row index
     a user sees in the python_calamine REPL `to_python()` default view)
@@ -1011,6 +1006,7 @@ def test_header_row_indexing_matches_repl_view_with_leading_blanks(tmp_path):
         """
         template_id: leading_blank_indexing
         version: 1
+        description: P2-7 fixture - header_row indexing past leading blank row
         entities:
           - name: row
             cardinality: many
@@ -1127,11 +1123,6 @@ def test_row_is_annotation_drops_single_cell_rows(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-10: tab: only / tab_index not yet implemented; dynamic-name single-tab "
-    "workbooks need brittle tab_pattern: '.*' workarounds.",
-)
 def test_tab_only_binds_to_single_data_tab_regardless_of_name(tmp_path):
     def build(wb):
         # One tab, but its name varies per file. Operator named it the date.
@@ -1145,6 +1136,7 @@ def test_tab_only_binds_to_single_data_tab_regardless_of_name(tmp_path):
         """
         template_id: tab_only
         version: 1
+        description: P2-10 fixture - tab:only binds to lone non-ignored tab
         entities:
           - name: row
             cardinality: many
@@ -1217,11 +1209,6 @@ def test_min_data_density_warns_when_most_rows_mostly_blank(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-12: wrong_type on (datetime.time vs datetime field) has no "
-    "likely_cause; should be excel_time_only_cell (symmetric to excel_autoconvert).",
-)
 def test_wrong_type_time_vs_datetime_emits_likely_cause(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
@@ -1234,6 +1221,7 @@ def test_wrong_type_time_vs_datetime_emits_likely_cause(tmp_path):
         """
         template_id: time_vs_datetime_likely_cause
         version: 1
+        description: P2-12 fixture - datetime field receives time-only cell
         entities:
           - name: sample
             cardinality: many
@@ -1304,11 +1292,6 @@ def test_anchor_value_type_rejects_neighbor_of_wrong_shape(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-14: crease.inspect_headers() helper not yet implemented; template "
-    "authors need a way to see what header_row N actually contains after normalization.",
-)
 def test_inspect_headers_returns_normalized_header_to_index_map(tmp_path):
     """A diagnostic helper: ``crease.inspect_headers(file, tab, header_row)``
     returns the normalized header strings mapped to their column indices, so

@@ -281,6 +281,37 @@ When the neighbor of `Project ID:` is a string like `"Quarterly Sample
 Plan"`, the report carries a single `anchor_value_type_mismatch`
 entry instead of the harder-to-route `wrong_type`.
 
+## Single-tab workbooks with dynamic tab names
+
+Some reports are single-tab workbooks where the operator names the tab
+after the period (`4-20-26`, `Week 17`). A template `tab: ".*"` works
+but is brittle; the sentinel `tab: only` binds to the lone non-ignored
+sheet regardless of its name:
+
+```yaml
+locate:
+  tab: only        # the workbook must have exactly one non-ignored tab
+  orientation: flat
+  header_row: 0
+```
+
+When the workbook has zero or more than one non-ignored tab, `tab:
+only` matches nothing and the existing `missing_tab` / `entity_missing`
+errors fire.
+
+## Inspecting normalized headers
+
+When a template hits `header_mapping_failed` and the cause isn't
+obvious, `crease.inspect_headers(file, tab=..., header_row=...)`
+returns the normalized header → column-index map crease *actually
+sees* after NBSP / whitespace collapse / lower-case. Use it instead of
+launching a separate REPL to inspect the file.
+
+```python
+import crease
+crease.inspect_headers("report.xlsx", tab="Sheet1", header_row=0)
+# {"farm name": 0, "total eggs": 1, "hatch date": 2}
+```
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine
