@@ -231,6 +231,8 @@ def _row_msg(reason: str, field: str | None, expected: str | None) -> str:
         return f"Field '{field}' could not be located by its anchor"
     if reason == "anchor_value_blank":
         return f"Field '{field}' has a label but its value cell is blank"
+    if reason == "anchor_value_type_mismatch":
+        return f"Field '{field}' anchor matched but the neighbor's shape didn't fit value_type={expected!r}"
     return f"Field '{field}': {reason}"
 
 
