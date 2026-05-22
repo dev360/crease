@@ -843,11 +843,6 @@ def test_data_ends_at_value_pattern_stops_on_regex_match(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-4: per-row enrich from anchored cells not yet implemented; "
-    "anchor is field-level on cardinality:one entities only.",
-)
 def test_enrich_from_anchor_attaches_label_value_to_every_row(tmp_path):
     """A header block above the data has ``PROJECTED HATCH: 2026-01-15`` —
     the date applies to every detail row below. Should bind as an
@@ -869,6 +864,7 @@ def test_enrich_from_anchor_attaches_label_value_to_every_row(tmp_path):
         """
         template_id: enrich_from_anchor
         version: 1
+        description: P2-4 fixture - per-row enrich from anchored cell
         entities:
           - name: placement
             cardinality: many
@@ -892,7 +888,7 @@ def test_enrich_from_anchor_attaches_label_value_to_every_row(tmp_path):
     )
 
     for row in result.canonical["placements"]:
-        assert row["projected_hatch"] == date(2026, 1, 15)
+        assert row["projected_hatch"] == "2026-01-15"
 
 
 # ======================================================================
@@ -1262,12 +1258,6 @@ def test_wrong_type_time_vs_datetime_emits_likely_cause(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-13: anchor.value_type not yet implemented; an anchor whose value is "
-    "the wrong shape (e.g. an email where an integer was expected) still matches "
-    "without protest.",
-)
 def test_anchor_value_type_rejects_neighbor_of_wrong_shape(tmp_path):
     """An anchor for ``Project ID:`` expects an integer neighbor, but in this
     file the operator put the project name to the right of the label.
@@ -1285,6 +1275,7 @@ def test_anchor_value_type_rejects_neighbor_of_wrong_shape(tmp_path):
         """
         template_id: anchor_value_type
         version: 1
+        description: P2-13 fixture - anchor.value_type rejects wrong-shape neighbor
         entities:
           - name: cover
             cardinality: one
