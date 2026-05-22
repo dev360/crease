@@ -516,6 +516,24 @@ def _row_is_annotation(row: list[Any], rules: list[AnnotationRule]) -> bool:
     return any(populated <= rule.only_columns_populated for rule in rules)
 
 
+def _forward_fill_rows(rows: list[list[Any]], cols: list[int]) -> list[list[Any]]:
+    last_seen: dict[int, Any] = {}
+    filled: list[list[Any]] = []
+    for row in rows:
+        new_row = list(row)
+        for col in cols:
+            if col >= len(new_row):
+                continue
+            value = new_row[col]
+            if value is None or (isinstance(value, str) and value.strip() == ""):
+                if col in last_seen:
+                    new_row[col] = last_seen[col]
+            else:
+                last_seen[col] = value
+        filled.append(new_row)
+    return filled
+
+
 def _extract_flat(
     ws: Sheet,
     entity: Entity,
@@ -630,6 +648,16 @@ def _extract_flat(
         if h == "":
             continue
         header_to_cols.setdefault(h, []).append(col_idx)
+
+    # Resolve forward_fill column names to indices once.
+    forward_fill_cols: list[int] = []
+    for col_name in entity.locate.forward_fill:
+        wanted = normalize_header(col_name)
+        if wanted in headers:
+            forward_fill_cols.append(headers.index(wanted))
+
+    if forward_fill_cols:
+        data_rows = _forward_fill_rows(data_rows, forward_fill_cols)
 
     field_to_col: dict[str, int] = {}
     missing_columns: list[str] = []

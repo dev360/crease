@@ -146,6 +146,7 @@ class Locate(BaseModel):
     data_ends_at: DataEnd | None = None
     skip_row_if: list[LocateSkipRule] = []
     row_is_annotation_if: list[AnnotationRule] = []
+    forward_fill: list[str] = []
 
     # property_sheet
     label_col: int = 0
