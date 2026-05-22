@@ -821,9 +821,7 @@ def _apply_separator_rows(
     adjust to the windowed column offset before indexing.
     """
     col_offset = cell_range.start_col if cell_range else 0
-    compiled: list[re.Pattern | None] = [
-        re.compile(r.cell_pattern) if r.cell_pattern else None for r in rules
-    ]
+    compiled: list[re.Pattern | None] = [re.compile(r.cell_pattern) if r.cell_pattern else None for r in rules]
     out: list[list[Any]] = []
     for row in grid:
         # Translate sheet-absolute column → grid-relative.
@@ -1090,11 +1088,7 @@ def _extract_for_block(
         for instance in instances:
             captures = _resolve_captures(ws, block, instance, result)
             # Only carry captures with propagate=True onto the row.
-            propagating = {
-                cap.field: captures.get(cap.field)
-                for cap in block.captures
-                if cap.propagate
-            }
+            propagating = {cap.field: captures.get(cap.field) for cap in block.captures if cap.propagate}
             cell_range_for_instance = CellRange(
                 start_row=instance.start_row,
                 end_row=instance.end_row,

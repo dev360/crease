@@ -240,9 +240,7 @@ class SkipRowRule(BaseModel):
     def _exactly_one(self) -> SkipRowRule:
         has_pattern = self.cell_pattern is not None
         if has_pattern == self.match_blank:
-            raise ValueError(
-                "SkipRowRule requires exactly one of `cell_pattern` or `match_blank: true`"
-            )
+            raise ValueError("SkipRowRule requires exactly one of `cell_pattern` or `match_blank: true`")
         return self
 
 
@@ -300,8 +298,7 @@ class Template(BaseModel):
         # `blocks:` is a v2 feature.
         if self.blocks and self.version == 1:
             raise ValueError(
-                "`blocks:` requires `version: 2`; bump the template version "
-                "or remove the blocks declaration"
+                "`blocks:` requires `version: 2`; bump the template version " "or remove the blocks declaration"
             )
 
         if not self.blocks:

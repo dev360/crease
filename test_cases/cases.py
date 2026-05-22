@@ -1029,7 +1029,12 @@ def case_blocks_capture_wrong_type() -> TestCase:
     expected = _envelope(
         "blocks_capture_wrong_type",
         orders=[
-            {"order_id": o["order_id"], "customer": o["customer"], "quantity": o["quantity"], "order_date": "99-99-9999"}
+            {
+                "order_id": o["order_id"],
+                "customer": o["customer"],
+                "quantity": o["quantity"],
+                "order_date": "99-99-9999",
+            }
             for o in orders
         ],
     )
