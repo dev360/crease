@@ -32,7 +32,7 @@ from __future__ import annotations
 
 from crease._errors import Error, ValidationError
 from crease._workbook import SourceFileError
-from crease.extractor import ExtractResult, extract, get, stream
+from crease.extractor import ExtractResult, extract, get, inspect_headers, stream
 from crease.session import Session, open
 from crease.template_model import (
     Anchor,
@@ -62,6 +62,7 @@ __all__ = [
     "ExtractResult",
     "extract",
     "get",
+    "inspect_headers",
     "stream",
     # validation
     "Report",

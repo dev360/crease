@@ -1520,6 +1520,50 @@ def _extract_entity(workbook: Workbook, entity: Entity, template: Template, resu
 # ---- public API ----------------------------------------------------------
 
 
+def inspect_headers(
+    path: str | Path,
+    *,
+    tab: str,
+    header_row: int = 0,
+    engine: Engine | None = None,
+) -> dict[str, int]:
+    """Return the normalized header → column index map for one tab.
+
+    A diagnostic for template authors: shows the headers crease *sees*
+    after normalization (NBSP / whitespace collapse / lower-case), so
+    a ``header_mapping_failed`` error can be debugged without launching
+    a separate REPL. Blank header cells are omitted.
+
+    Args:
+        path: Path to the spreadsheet file.
+        tab: Name of the tab to inspect.
+        header_row: 0-indexed row to read headers from. Defaults to 0.
+        engine: Optional backend override; defaults to calamine.
+
+    Returns:
+        Dict mapping each non-blank normalized header to its column index.
+
+    Raises:
+        ValueError: If the tab does not exist in the file.
+        crease.SourceFileError: If the file cannot be opened.
+    """
+    eng: Engine = engine if engine is not None else "calamine"
+    workbook = open_workbook(path, engine=eng)
+    for ws in workbook.sheets:
+        if ws.name != tab:
+            continue
+        for r_idx, row in enumerate(ws.iter_rows()):
+            if r_idx == header_row:
+                result_map: dict[str, int] = {}
+                for col_idx, raw in enumerate(row):
+                    normalized = normalize_header(raw)
+                    if normalized:
+                        result_map[normalized] = col_idx
+                return result_map
+        return {}
+    raise ValueError(f"tab {tab!r} not found in {path}")
+
+
 def extract(path: str | Path, template: Template, *, engine: Engine | None = None) -> ExtractResult:
     """Apply a template to a spreadsheet file and return canonical JSON.
 
