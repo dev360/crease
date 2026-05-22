@@ -135,6 +135,11 @@ class FieldSpec(BaseModel):
 
     # source mapping (one of these is set, depending on orientation)
     source_column: str | None = None  # flat
+    # Disambiguates when source_column matches multiple header cells in the
+    # same row. 0-indexed across the matching occurrences (not raw column
+    # index). Leave None to let crease raise header_duplicated when the
+    # header is ambiguous.
+    source_column_index: int | None = None  # flat
     source_label: str | None = None  # property_sheet
     anchor: Anchor | None = None  # anchored
 

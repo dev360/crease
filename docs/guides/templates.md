@@ -48,6 +48,30 @@ Loaders reject `blocks:` declarations under `version: 1` rather than
 silently ignoring them, so an older runtime never produces
 half-extracted output against a v2 template.
 
+## Disambiguating duplicated headers
+
+If two header cells in the same row carry the same normalized text, a
+field with `source_column: "DATE"` is ambiguous — there are two columns
+that could match. Crease emits a `header_duplicated` warning and binds
+to the first occurrence so extraction still proceeds. To bind a specific
+field to a specific occurrence, set `source_column_index:` (0-indexed
+across the matches in the header row):
+
+```yaml
+fields:
+  - name: open_date
+    source_column: "DATE"
+    source_column_index: 0      # first DATE column
+    type: date
+  - name: close_date
+    source_column: "DATE"
+    source_column_index: 1      # second DATE column
+    type: date
+```
+
+Without `source_column_index`, both fields would bind to the same column
+and `report.errors()` would contain a `header_duplicated` entry.
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

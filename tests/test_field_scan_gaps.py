@@ -465,11 +465,6 @@ def test_anchor_nth_picks_second_match(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-2: duplicate header names silently bind to the first occurrence; "
-    "should emit a header_duplicated warning at template-bind time.",
-)
 def test_duplicate_source_column_warns_when_header_appears_twice(tmp_path):
     """If two header cells in the same row have the same normalized value
     (e.g. ``DATE`` in col 0 and ``DATE`` in col 5), a template that binds
@@ -489,6 +484,7 @@ def test_duplicate_source_column_warns_when_header_appears_twice(tmp_path):
         """
         template_id: duplicate_header
         version: 1
+        description: P1-2 fixture - same header text in two columns
         entities:
           - name: row
             cardinality: many
@@ -508,11 +504,6 @@ def test_duplicate_source_column_warns_when_header_appears_twice(tmp_path):
     assert any(e.type == "header_duplicated" for e in report.errors()), "expected header_duplicated warning"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-2: source_column_index tiebreaker not yet implemented for binding "
-    "to a specific occurrence of a duplicated header.",
-)
 def test_source_column_index_binds_to_second_occurrence(tmp_path):
     """Explicit ``source_column_index: 1`` should bind to the *second*
     occurrence of a duplicated header (0-indexed within matches).
@@ -529,6 +520,7 @@ def test_source_column_index_binds_to_second_occurrence(tmp_path):
         """
         template_id: source_column_index
         version: 1
+        description: P1-2 fixture - source_column_index tiebreaker
         entities:
           - name: row
             cardinality: many
@@ -543,8 +535,8 @@ def test_source_column_index_binds_to_second_occurrence(tmp_path):
         tmp_path,
     )
 
-    assert result.canonical["rows"][0]["first"] == date(2026, 1, 1)
-    assert result.canonical["rows"][0]["second"] == date(2026, 1, 5)
+    assert result.canonical["rows"][0]["first"] == "2026-01-01"
+    assert result.canonical["rows"][0]["second"] == "2026-01-05"
 
 
 # ======================================================================
