@@ -205,8 +205,8 @@ locate:
 
 ## Forward-filling grouping columns
 
-Schedules and roll-ups often set a grouping column (day, grower,
-region) on the *first* row of a group and leave it blank on the
+Schedules and roll-ups often set a grouping column (period, region,
+category) on the *first* row of a group and leave it blank on the
 continuation rows. ``locate.forward_fill: [col, ...]`` propagates the
 last non-blank value of each listed column down through blank rows
 before field coercion runs:
@@ -216,41 +216,41 @@ locate:
   tab: Sheet1
   orientation: flat
   header_row: 0
-  forward_fill: [day, grower]
+  forward_fill: [period, region]
 fields:
-  - { name: day, source_column: "day", type: string }
-  - { name: grower, source_column: "grower", type: string }
-  - { name: houses, source_column: "houses", type: string }
+  - { name: period, source_column: "period", type: string }
+  - { name: region, source_column: "region", type: string }
+  - { name: units, source_column: "units", type: string }
 ```
 
-A continuation row with `[None, None, "5-6", 50]` inherits `day` /
-`grower` from the row above; the moment a non-blank value appears, it
+A continuation row with `[None, None, "5-6", 50]` inherits `period` /
+`region` from the row above; the moment a non-blank value appears, it
 becomes the new "last seen" value for that column.
 
 ## Per-row enrichment from a labeled cell
 
 When a header block above the data carries a value that should be
-attached to every row (a projection date, a reporting period, a
+attached to every row (an effective date, a reporting period, a
 single-cell metadata block), declare it as an `enrich` entry with
 `source: anchor`:
 
 ```yaml
 entities:
-  - name: placement
+  - name: order
     cardinality: many
     locate:
       tab: Sheet1
       orientation: flat
       header_row: 2
     enrich:
-      - field: projected_hatch
+      - field: effective_date
         source: anchor
-        label_match: "PROJECTED HATCH:"
+        label_match: "EFFECTIVE DATE:"
         value_at: right
         offset: 1
         type: date
     fields:
-      - { name: farm, source_column: "farm", type: string }
+      - { name: customer, source_column: "customer", type: string }
 ```
 
 `label_match` / `match_mode` / `value_at` / `offset` mirror the field-
@@ -310,20 +310,22 @@ launching a separate REPL to inspect the file.
 ```python
 import crease
 crease.inspect_headers("report.xlsx", tab="Sheet1", header_row=0)
-# {"farm name": 0, "total eggs": 1, "hatch date": 2}
+# {"customer name": 0, "total items": 1, "due date": 2}
 ```
 
 ## Intentional cross-tab repetition
 
-A rolling-window report (the same farm-house placement carried across
-each week's tab) intentionally repeats every record N times.
-``locate.duplicate_policy: ignore`` suppresses the validator's
-default ``duplicate_row`` check for that entity so the cross-tab
-repetition lands as data rather than as a chorus of errors:
+When a workbook intentionally carries the same record across multiple
+tabs (a multi-tab report whose tabs each repeat a shared set of
+records), the validator's default ``duplicate_row`` check fires N
+times per record.
+``locate.duplicate_policy: ignore`` suppresses that check for the
+entity so the cross-tab repetition lands as data rather than as a
+chorus of errors:
 
 ```yaml
 locate:
-  tab_pattern: "^W\\d+$"
+  tab_pattern: "^Tab\\d+$"
   orientation: flat
   duplicate_policy: ignore
 ```
