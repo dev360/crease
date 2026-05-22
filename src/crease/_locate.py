@@ -68,8 +68,20 @@ def find_tabs(workbook: Workbook, locate: Locate, ignore_tabs: list[str]) -> lis
     return matches
 
 
-def find_header_row(ws: Sheet, anchor: HeaderAnchor, max_rows_to_scan: int = 50) -> int | None:
-    """Scan for the first row containing the anchor text. Returns 0-indexed row."""
+def find_header_row(
+    ws: Sheet,
+    anchor: HeaderAnchor,
+    max_rows_to_scan: int = 50,
+    *,
+    min_row: int = 0,
+    max_row: int | None = None,
+) -> int | None:
+    """Scan for the first row containing the anchor text. Returns 0-indexed row.
+
+    `min_row` / `max_row` (0-indexed, inclusive) scope the search to a window
+    of the worksheet — used when an entity lives inside a `Block` instance so
+    its header anchor is restricted to that instance's row range.
+    """
     target = anchor.text
     mode = anchor.match_mode
 
@@ -83,7 +95,11 @@ def find_header_row(ws: Sheet, anchor: HeaderAnchor, max_rows_to_scan: int = 50)
             return bool(re.search(target, s))
         return False
 
-    for r_idx, row in enumerate(ws.iter_rows(max_row=max_rows_to_scan)):
+    # iter_rows is 1-indexed in this codebase's adapter, scan caps are inclusive.
+    iter_min_row = min_row + 1
+    iter_max_row = (max_row + 1) if max_row is not None else max_rows_to_scan
+    for offset, row in enumerate(ws.iter_rows(min_row=iter_min_row, max_row=iter_max_row)):
+        r_idx = min_row + offset
         cells = list(row)
         if anchor.column is not None:
             if anchor.column < len(cells) and cells[anchor.column] is not None:
@@ -96,14 +112,25 @@ def find_header_row(ws: Sheet, anchor: HeaderAnchor, max_rows_to_scan: int = 50)
     return None
 
 
-def resolve_header_row(ws: Sheet, locate: Locate) -> int:
-    """Anchor wins if set; otherwise the literal `header_row`."""
+def resolve_header_row(
+    ws: Sheet,
+    locate: Locate,
+    *,
+    min_row: int = 0,
+    max_row: int | None = None,
+) -> int:
+    """Anchor wins if set; otherwise the literal `header_row`.
+
+    When `min_row` / `max_row` are set (block-scoped extraction), the
+    anchor scan is restricted to that window, and the literal
+    `locate.header_row` is interpreted relative to `min_row`.
+    """
     if locate.header_anchor is not None:
-        found = find_header_row(ws, locate.header_anchor)
+        found = find_header_row(ws, locate.header_anchor, min_row=min_row, max_row=max_row)
         if found is None:
             raise ValueError(f"header_anchor {locate.header_anchor.text!r} not found in tab {ws.name!r}")
         return found
-    return locate.header_row
+    return min_row + locate.header_row
 
 
 def hidden_row_indices(ws: Sheet) -> set[int]:

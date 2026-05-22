@@ -1,0 +1,1 @@
+Block instance with two matching date rows and `on_multiple: error`.

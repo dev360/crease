@@ -40,7 +40,7 @@ class TestCase:
         (target_dir / "description.txt").write_text(self.description.strip() + "\n")
 
         # expected.json — canonical JSON the extractor should produce
-        (target_dir / "expected.json").write_text(json.dumps(self.expected, default=str, indent=2))
+        (target_dir / "expected.json").write_text(json.dumps(self.expected, default=str, indent=2) + "\n")
 
         # expected_issues.json — for corrupted cases
         (target_dir / "expected_issues.json").write_text(

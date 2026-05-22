@@ -1,0 +1,1 @@
+A block whose ends_at anchor never appears before EOF.
