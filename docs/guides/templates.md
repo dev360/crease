@@ -312,6 +312,38 @@ import crease
 crease.inspect_headers("report.xlsx", tab="Sheet1", header_row=0)
 # {"farm name": 0, "total eggs": 1, "hatch date": 2}
 ```
+
+## Intentional cross-tab repetition
+
+A rolling-window report (the same farm-house placement carried across
+each week's tab) intentionally repeats every record N times.
+``locate.duplicate_policy: ignore`` suppresses the validator's
+default ``duplicate_row`` check for that entity so the cross-tab
+repetition lands as data rather than as a chorus of errors:
+
+```yaml
+locate:
+  tab_pattern: "^W\\d+$"
+  orientation: flat
+  duplicate_policy: ignore
+```
+
+## Catching structural-noise extracts
+
+When the wrong template is applied to a file (header_row picked the
+wrong row, the file is a paper-form layout that doesn't really fit
+the template), extraction still emits records — most of them
+mostly-blank. ``locate.min_data_density`` surfaces this as a single
+``low_data_density`` warning rather than dozens of
+``missing_required`` errors:
+
+```yaml
+locate:
+  tab: Sheet1
+  orientation: flat
+  header_row: 0
+  min_data_density: 0.5    # warn if <50% of cells across rows are populated
+```
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

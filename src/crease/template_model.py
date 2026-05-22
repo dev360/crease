@@ -156,6 +156,8 @@ class Locate(BaseModel):
 
     # filtering
     skip_hidden_rows: bool = False
+    duplicate_policy: Literal["error", "ignore"] = "error"
+    min_data_density: float | None = None  # 0..1; warn when extracted rows are sparser
 
 
 class Enrich(BaseModel):
