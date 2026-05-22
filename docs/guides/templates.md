@@ -203,6 +203,30 @@ locate:
     - only_columns_populated: 1
 ```
 
+## Forward-filling grouping columns
+
+Schedules and roll-ups often set a grouping column (day, grower,
+region) on the *first* row of a group and leave it blank on the
+continuation rows. ``locate.forward_fill: [col, ...]`` propagates the
+last non-blank value of each listed column down through blank rows
+before field coercion runs:
+
+```yaml
+locate:
+  tab: Sheet1
+  orientation: flat
+  header_row: 0
+  forward_fill: [day, grower]
+fields:
+  - { name: day, source_column: "day", type: string }
+  - { name: grower, source_column: "grower", type: string }
+  - { name: houses, source_column: "houses", type: string }
+```
+
+A continuation row with `[None, None, "5-6", 50]` inherits `day` /
+`grower` from the row above; the moment a non-blank value appears, it
+becomes the new "last seen" value for that column.
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine
