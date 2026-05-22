@@ -206,6 +206,7 @@ def _structural_msg(reason: str) -> str:
         "missing_tab": "Template's tab was not found in the workbook",
         "tab_pattern_no_match": "No tabs matched the template's tab_pattern",
         "header_mapping_failed": "Required header(s) not found in the worksheet",
+        "header_duplicated": "source_column matched multiple header cells; set source_column_index to disambiguate",
         "entity_missing": "Entity could not be located in the workbook",
         "multiple_rows_for_cardinality_one": "Cardinality 'one' entity returned multiple rows",
         "column_count_mismatch": "Header row has the wrong number of columns",

@@ -450,6 +450,7 @@ except crease.ValidationError as e:
 | `empty_row` | Mid-data blank row |
 | `duplicate_row` | Row identical to a previous one |
 | `anchor_not_found` | Anchored field's label text not present in tab |
+| `header_duplicated` | `source_column` matches multiple header cells in the same row; bind picked the first. Set `source_column_index:` on the field to choose a specific occurrence (0-indexed across the matches). |
 | `boolean_alias_unknown` | Value didn't match `true_values`/`false_values` |
 | `model_field_missing_in_canonical` | A Pydantic model passed to `to_pydantic` requires a field the template doesn't produce |
 | `model_type_mismatch` | A Pydantic model's field type doesn't match the canonical value's type |
