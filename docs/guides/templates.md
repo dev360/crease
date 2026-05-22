@@ -133,6 +133,28 @@ fields:
       offset: 2
 ```
 
+## Time fields
+
+`type: time` accepts native `datetime.time` cells, datetime cells (the
+time component is extracted), and string cells. Strings are normalized
+so that `a.m.` / `p.m.` markers match `%p` (i.e. `"7:30 a.m."` becomes
+`"7:30 AM"`) and then parsed against an optional list of
+`time_formats`:
+
+```yaml
+fields:
+  - name: collection_time
+    source_column: "collection_time"
+    type: time
+    time_formats:
+      - "%I:%M %p"
+      - "%H:%M"
+```
+
+If no `time_formats` are given, ISO-format strings (`"09:30:00"`,
+`"09:30"`) still parse. The canonical value is always the ISO string
+form of the time (mirroring how `date` / `datetime` fields project).
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine

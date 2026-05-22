@@ -17,6 +17,7 @@ FieldType = Literal[
     "boolean",
     "date",
     "datetime",
+    "time",
     "email",
     "uuid",
     "url",
@@ -186,6 +187,7 @@ class FieldSpec(BaseModel):
     true_values: list[str] | None = None  # boolean only
     false_values: list[str] | None = None
     date_format: str | None = None  # strptime-compatible
+    time_formats: list[str] | None = None  # strptime-compatible; tried in order for type=time
 
 
 class Entity(BaseModel):
@@ -465,6 +467,7 @@ _PY_TYPE: dict[str, type] = {
     "boolean": bool,
     "date": _dt.date,
     "datetime": _dt.datetime,
+    "time": _dt.time,
     "email": str,
     "uuid": str,
     "url": str,

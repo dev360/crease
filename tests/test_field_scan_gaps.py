@@ -522,10 +522,6 @@ def test_source_column_index_binds_to_second_occurrence(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-3: 'time' is not in FieldType; datetime.time cells need their own type.",
-)
 def test_time_type_accepts_native_datetime_time(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
@@ -539,6 +535,7 @@ def test_time_type_accepts_native_datetime_time(tmp_path):
         """
         template_id: time_native
         version: 1
+        description: P1-3 fixture - native datetime.time cells
         entities:
           - name: sample
             cardinality: many
@@ -553,14 +550,10 @@ def test_time_type_accepts_native_datetime_time(tmp_path):
         tmp_path,
     )
 
-    assert result.canonical["samples"][0]["collection_time"] == time(9, 30)
-    assert result.canonical["samples"][1]["collection_time"] == time(10, 30)
+    assert result.canonical["samples"][0]["collection_time"] == "09:30:00"
+    assert result.canonical["samples"][1]["collection_time"] == "10:30:00"
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P1-3b: time_format coercion for free-text time strings not implemented.",
-)
 def test_time_type_coerces_free_text_strings(tmp_path):
     """``"7:30 a.m."`` should coerce to ``time(7, 30)`` given a time_format."""
 
@@ -576,6 +569,7 @@ def test_time_type_coerces_free_text_strings(tmp_path):
         """
         template_id: time_format
         version: 1
+        description: P1-3 fixture - time_formats parses free-text time strings
         entities:
           - name: sample
             cardinality: many
@@ -596,8 +590,8 @@ def test_time_type_coerces_free_text_strings(tmp_path):
         tmp_path,
     )
 
-    assert result.canonical["samples"][0]["collection_time"] == time(7, 30)
-    assert result.canonical["samples"][1]["collection_time"] == time(12, 0)
+    assert result.canonical["samples"][0]["collection_time"] == "07:30:00"
+    assert result.canonical["samples"][1]["collection_time"] == "12:00:00"
 
 
 # ======================================================================

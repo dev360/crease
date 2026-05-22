@@ -19,6 +19,7 @@ _EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 _UUID_RE = re.compile(r"^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$", re.I)
 _URL_RE = re.compile(r"^https?://\S+$")
 _ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_AM_PM_RE = re.compile(r"(?i)(?<=\s)[ap]\.?m\.?(?=\s|$)")
 _NBSP = " "
 
 
@@ -168,6 +169,27 @@ def coerce(value: Any, field: FieldSpec) -> Any:
             try:
                 parsed = dt.datetime.fromisoformat(s.replace("Z", "+00:00"))
                 return parsed.date().isoformat() if t == "date" else parsed.isoformat()
+            except ValueError as e:
+                raise CoercionError(value, t) from e
+        raise CoercionError(value, t)
+
+    if t == "time":
+        if isinstance(value, dt.time):
+            return value.isoformat()
+        if isinstance(value, dt.datetime):
+            return value.time().isoformat()
+        if isinstance(value, str):
+            s = value.strip()
+            # Operators write "7:30 a.m." with periods; %p only matches "AM"/"PM".
+            # Normalize the marker so a single set of formats covers both shapes.
+            normalized = _AM_PM_RE.sub(lambda m: m.group(0).replace(".", "").upper(), s)
+            for fmt in field.time_formats or ():
+                try:
+                    return dt.datetime.strptime(normalized, fmt).time().isoformat()
+                except ValueError:
+                    continue
+            try:
+                return dt.time.fromisoformat(s).isoformat()
             except ValueError as e:
                 raise CoercionError(value, t) from e
         raise CoercionError(value, t)
