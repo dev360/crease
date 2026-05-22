@@ -25,14 +25,17 @@ Methods on Report:
 
 Exceptions:
     crease.ValidationError                      # raised by halt-by-default projections
-    crease.SourceFileError                      # backend could not open the input file
+    crease.SourceFileError                      # exception type still exported for callers
+                                                # that catch it; `extract` no longer raises
+                                                # it (file-open failures surface as the
+                                                # structural `unreadable_source` error).
 """
 
 from __future__ import annotations
 
 from crease._errors import Error, ValidationError
 from crease._workbook import SourceFileError
-from crease.extractor import ExtractResult, extract, get, inspect_headers, stream
+from crease.extractor import ClassifyVerdict, ExtractResult, classify, extract, get, inspect_headers, stream
 from crease.session import Session, open
 from crease.template_model import (
     Anchor,
@@ -64,6 +67,8 @@ __all__ = [
     "get",
     "inspect_headers",
     "stream",
+    "classify",
+    "ClassifyVerdict",
     # validation
     "Report",
     "Error",

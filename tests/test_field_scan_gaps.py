@@ -896,11 +896,6 @@ def test_enrich_from_anchor_attaches_label_value_to_every_row(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-5: corrupted source files raise SourceFileError instead of surfacing as "
-    "a Report with a structural `unreadable_source` error.",
-)
 def test_corrupted_xlsx_surfaces_as_unreadable_source_error(tmp_path):
     """A truncated zip should produce ``Report.errors()`` containing a
     structural ``unreadable_source`` entry — uniform with other structural
@@ -916,6 +911,7 @@ def test_corrupted_xlsx_surfaces_as_unreadable_source_error(tmp_path):
         """
         template_id: unreadable_source
         version: 1
+        description: P2-5 fixture - corrupted xlsx surfaces as structural error
         entities:
           - name: row
             cardinality: many
@@ -941,11 +937,6 @@ def test_corrupted_xlsx_surfaces_as_unreadable_source_error(tmp_path):
 # ======================================================================
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P2-6: crease.classify() does not exist; needed for a 'this file shape "
-    "isn't templatable' verdict before attempting extraction.",
-)
 def test_classify_reports_low_confidence_on_unfit_file(tmp_path):
     """A file with no header row at all should classify as ``not_templatable``
     against a flat template expecting a clear header.
@@ -965,6 +956,7 @@ def test_classify_reports_low_confidence_on_unfit_file(tmp_path):
         """
         template_id: classify_unfit
         version: 1
+        description: P2-6 fixture - classify reports low confidence on unfit file
         entities:
           - name: row
             cardinality: many

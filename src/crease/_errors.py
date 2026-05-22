@@ -37,6 +37,7 @@ STRUCTURAL_TYPES: frozenset[str] = frozenset(
         "capture_no_match",
         "capture_multiple_matches",
         "block_ref_not_found",
+        "unreadable_source",
     }
 )
 
