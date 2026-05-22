@@ -465,6 +465,51 @@ def _extract_flat(
     raw_headers = grid[header_idx] if grid else []
     headers = normalize_headers(raw_headers)
 
+    # Interim multi-row-header drift detector: if the row directly above the
+    # chosen header_row carries non-blank text in the same column as a real
+    # header, the operator probably meant a two-row header but only pointed
+    # at the bottom row. Surface the column geometry so the report shows
+    # what the bind would have looked like with header_levels:2.
+    #
+    # Skip when the entity uses ``header_anchor`` (the row was dynamically
+    # located by scanning a known label; content above is expected — title
+    # blocks, block start anchors, etc.) or when extracting inside a block
+    # instance (the surrounding tab routinely carries section-level metadata
+    # above each block's header).
+    skip_header_above_check = entity.locate.header_anchor is not None or cell_range_override is not None
+    if not skip_header_above_check and header_idx > 0 and header_idx - 1 < len(grid):
+        above = grid[header_idx - 1]
+        suspicious: list[dict[str, Any]] = []
+        for col_idx, header_text in enumerate(headers):
+            if header_text == "":
+                continue
+            if col_idx >= len(above):
+                continue
+            raw_above = above[col_idx]
+            if raw_above is None:
+                continue
+            above_text = str(raw_above).strip()
+            if above_text == "":
+                continue
+            suspicious.append(
+                {
+                    "column": col_idx,
+                    "header": header_text,
+                    "above": above_text,
+                }
+            )
+        if suspicious:
+            result.errors.append(
+                ExtractionError(
+                    entity=entity.name,
+                    reason="header_above_nonblank",
+                    details={
+                        "header_row": header_idx,
+                        "columns": suspicious,
+                    },
+                )
+            )
+
     data_starts_offset = (
         (entity.locate.data_starts_row - (cell_range.start_row if cell_range else 0))
         if entity.locate.data_starts_row is not None
