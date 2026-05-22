@@ -11,7 +11,7 @@ here because ``test_cases/repeating_sections_per_tab/`` already encodes
 that proposed ``blocks:`` syntax as a fixture.
 
 All data is fictitious — Acme/Globex/Hooli/Initech, ``example.com``,
-``ORD-####``, generic farm/site names. No real customer/vendor data
+``ORD-####``, generic synthetic names. No real customer/vendor data
 crosses into this repo (see CLAUDE.md "No real PII in generated
 artifacts").
 """
@@ -215,10 +215,10 @@ def test_multi_row_header_combines_two_rows_into_semantic_name(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
         # Two-row header.
-        ws.append(["Farm", None, "DRY OR"])
-        ws.append([None, "House", "LIQUID"])
-        ws.append(["Foo Farms", "01", "LIQUID"])
-        ws.append(["Bar Acres", "02", "DRY"])
+        ws.append(["Region", None, "TYPE A OR"])
+        ws.append([None, "Unit", "TYPE B"])
+        ws.append(["Acme Corp", "01", "TYPE B"])
+        ws.append(["Globex Corp", "02", "TYPE A"])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -235,14 +235,14 @@ def test_multi_row_header_combines_two_rows_into_semantic_name(tmp_path):
               header_levels: 2
               header_row: 0
             fields:
-              - { name: farm, source_column: "Farm", type: string }
-              - { name: house, source_column: "House", type: string }
-              - { name: dry_or_liquid, source_column: "DRY OR LIQUID", type: string }
+              - { name: region, source_column: "Region", type: string }
+              - { name: unit, source_column: "Unit", type: string }
+              - { name: variant, source_column: "TYPE A OR TYPE B", type: string }
         """,
         tmp_path,
     )
 
-    assert [r["dry_or_liquid"] for r in result.canonical["rows"]] == ["LIQUID", "DRY"]
+    assert [r["variant"] for r in result.canonical["rows"]] == ["TYPE B", "TYPE A"]
 
 
 def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
@@ -255,8 +255,8 @@ def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
         ws.append([None, "EST."])  # row above header carries qualifying text
-        ws.append(["farm", "NUMBER"])
-        ws.append(["Foo Farms", 100])
+        ws.append(["customer", "NUMBER"])
+        ws.append(["Acme Corp", 100])
 
     xlsx = _xlsx(tmp_path, build)
     tmpl = _load(
@@ -273,7 +273,7 @@ def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
               orientation: flat
               header_row: 1
             fields:
-              - { name: farm, source_column: "farm", type: string }
+              - { name: customer, source_column: "customer", type: string }
               - { name: number, source_column: "NUMBER", type: integer }
         """,
     )
@@ -288,14 +288,14 @@ def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
 
 
 def test_header_normalization_collapses_newlines(tmp_path):
-    """A header cell with an Excel line-wrap (``"Total \\nEggs"``) should
-    match ``source_column: "Total Eggs"`` after normalization.
+    """A header cell with an Excel line-wrap (``"Total \\nItems"``) should
+    match ``source_column: "Total Items"`` after normalization.
     """
 
     def build(wb):
         ws = wb.create_sheet("Sheet1")
-        ws.append(["Farm", "Total \nEggs"])  # literal newline in header
-        ws.append(["Foo Farms", 42])
+        ws.append(["Customer", "Total \nItems"])  # literal newline in header
+        ws.append(["Acme Corp", 42])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -312,20 +312,20 @@ def test_header_normalization_collapses_newlines(tmp_path):
               orientation: flat
               header_row: 0
             fields:
-              - { name: farm, source_column: "Farm", type: string }
-              - { name: total_eggs, source_column: "Total Eggs", type: integer }
+              - { name: customer, source_column: "Customer", type: string }
+              - { name: total_items, source_column: "Total Items", type: integer }
         """,
         tmp_path,
     )
 
-    assert result.canonical["rows"][0]["total_eggs"] == 42
+    assert result.canonical["rows"][0]["total_items"] == 42
 
 
 def test_header_normalization_collapses_double_spaces(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
-        ws.append(["Farm", "House  No"])  # double-space typo
-        ws.append(["Foo Farms", "03"])
+        ws.append(["Customer", "Unit  No"])  # double-space typo
+        ws.append(["Acme Corp", "03"])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -342,13 +342,13 @@ def test_header_normalization_collapses_double_spaces(tmp_path):
               orientation: flat
               header_row: 0
             fields:
-              - { name: farm, source_column: "Farm", type: string }
-              - { name: house_no, source_column: "House No", type: string }
+              - { name: customer, source_column: "Customer", type: string }
+              - { name: unit_no, source_column: "Unit No", type: string }
         """,
         tmp_path,
     )
 
-    assert result.canonical["rows"][0]["house_no"] == "03"
+    assert result.canonical["rows"][0]["unit_no"] == "03"
 
 
 # ======================================================================
@@ -408,7 +408,7 @@ def test_anchor_nth_picks_second_match(tmp_path):
         ws.append([None])
         ws.append([None])
         ws.append([None])
-        ws.append(["SHIPPING INFORMATION", "Carrier", "FedEx Generic"])
+        ws.append(["SHIPPING INFORMATION", "Carrier", "Acme Logistics"])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -435,7 +435,7 @@ def test_anchor_nth_picks_second_match(tmp_path):
         tmp_path,
     )
 
-    assert result.canonical["cover"]["carrier_after_label"] == "FedEx Generic"
+    assert result.canonical["cover"]["carrier_after_label"] == "Acme Logistics"
 
 
 # ======================================================================
@@ -748,18 +748,18 @@ def test_null_patterns_match_unfilled_form_placeholders(tmp_path):
 
 
 def test_forward_fill_inherits_group_columns_from_previous_row(tmp_path):
-    """A schedule with day-of-week + grower set on the first row of a group,
-    blank on continuation rows. ``forward_fill`` should propagate the values
+    """A schedule with period + region set on the first row of a group, blank
+    on continuation rows. ``forward_fill`` should propagate the values
     downward until the next non-blank.
     """
 
     def build(wb):
         ws = wb.create_sheet("Sheet1")
-        ws.append(["day", "grower", "houses", "qty"])
-        ws.append(["MONDAY", "Acme Co.", "1-4", 100])
-        ws.append([None, None, "5-6", 50])  # continues Acme/MONDAY
-        ws.append(["TUESDAY", "Globex Corp", "1-4", 80])
-        ws.append([None, None, "5-8", 40])  # continues Globex/TUESDAY
+        ws.append(["period", "region", "units", "qty"])
+        ws.append(["Q1", "Acme Co.", "1-4", 100])
+        ws.append([None, None, "5-6", 50])  # continues Acme/Q1
+        ws.append(["Q2", "Globex Corp", "1-4", 80])
+        ws.append([None, None, "5-8", 40])  # continues Globex/Q2
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -769,26 +769,26 @@ def test_forward_fill_inherits_group_columns_from_previous_row(tmp_path):
         version: 1
         description: P2-2 fixture - forward-fill grouping columns
         entities:
-          - name: placement
+          - name: order
             cardinality: many
             locate:
               tab: Sheet1
               orientation: flat
               header_row: 0
-              forward_fill: [day, grower]
+              forward_fill: [period, region]
             fields:
-              - { name: day, source_column: "day", type: string }
-              - { name: grower, source_column: "grower", type: string }
-              - { name: houses, source_column: "houses", type: string }
+              - { name: period, source_column: "period", type: string }
+              - { name: region, source_column: "region", type: string }
+              - { name: units, source_column: "units", type: string }
               - { name: qty, source_column: "qty", type: integer }
         """,
         tmp_path,
     )
 
-    rows = result.canonical["placements"]
+    rows = result.canonical["orders"]
     assert len(rows) == 4
-    assert [r["day"] for r in rows] == ["MONDAY", "MONDAY", "TUESDAY", "TUESDAY"]
-    assert [r["grower"] for r in rows] == ["Acme Co.", "Acme Co.", "Globex Corp", "Globex Corp"]
+    assert [r["period"] for r in rows] == ["Q1", "Q1", "Q2", "Q2"]
+    assert [r["region"] for r in rows] == ["Acme Co.", "Acme Co.", "Globex Corp", "Globex Corp"]
 
 
 # ======================================================================
@@ -805,8 +805,8 @@ def test_data_ends_at_value_pattern_stops_on_regex_match(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
         ws.append(["label", "value"])
-        ws.append(["Foo Farms", 100])
-        ws.append(["Bar Acres", 200])
+        ws.append(["Acme Corp", 100])
+        ws.append(["Globex Corp", 200])
         ws.append(["AVG AGE  25+ :", 150])  # sentinel — stop here
         ws.append(["Age 25+ Total:", 300])
 
@@ -835,7 +835,7 @@ def test_data_ends_at_value_pattern_stops_on_regex_match(tmp_path):
         tmp_path,
     )
 
-    assert [r["label"] for r in result.canonical["rows"]] == ["Foo Farms", "Bar Acres"]
+    assert [r["label"] for r in result.canonical["rows"]] == ["Acme Corp", "Globex Corp"]
 
 
 # ======================================================================
@@ -844,19 +844,19 @@ def test_data_ends_at_value_pattern_stops_on_regex_match(tmp_path):
 
 
 def test_enrich_from_anchor_attaches_label_value_to_every_row(tmp_path):
-    """A header block above the data has ``PROJECTED HATCH: 2026-01-15`` —
+    """A header block above the data has ``EFFECTIVE DATE: 2026-01-15`` —
     the date applies to every detail row below. Should bind as an
     ``enrich`` field with ``source: anchor``.
     """
 
     def build(wb):
         ws = wb.create_sheet("Sheet1")
-        ws.append(["PROJECTED HATCH:", date(2026, 1, 15), None])
+        ws.append(["EFFECTIVE DATE:", date(2026, 1, 15), None])
         ws.append([None, None, None])
-        ws.append(["farm", "house", "head"])
-        ws.append(["Foo Farms", "01", 1000])
-        ws.append(["Foo Farms", "02", 1200])
-        ws.append(["Bar Acres", "01", 800])
+        ws.append(["customer", "unit", "count"])
+        ws.append(["Acme Corp", "01", 1000])
+        ws.append(["Acme Corp", "02", 1200])
+        ws.append(["Globex Corp", "01", 800])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -866,29 +866,29 @@ def test_enrich_from_anchor_attaches_label_value_to_every_row(tmp_path):
         version: 1
         description: P2-4 fixture - per-row enrich from anchored cell
         entities:
-          - name: placement
+          - name: order
             cardinality: many
             locate:
               tab: Sheet1
               orientation: flat
               header_row: 2
             enrich:
-              - field: projected_hatch
+              - field: effective_date
                 source: anchor
-                label_match: "PROJECTED HATCH:"
+                label_match: "EFFECTIVE DATE:"
                 value_at: right
                 offset: 1
                 type: date
             fields:
-              - { name: farm, source_column: "farm", type: string }
-              - { name: house, source_column: "house", type: string }
-              - { name: head, source_column: "head", type: integer }
+              - { name: customer, source_column: "customer", type: string }
+              - { name: unit, source_column: "unit", type: string }
+              - { name: count, source_column: "count", type: integer }
         """,
         tmp_path,
     )
 
-    for row in result.canonical["placements"]:
-        assert row["projected_hatch"] == "2026-01-15"
+    for row in result.canonical["orders"]:
+        assert row["effective_date"] == "2026-01-15"
 
 
 # ======================================================================
@@ -997,8 +997,8 @@ def test_header_row_indexing_matches_repl_view_with_leading_blanks(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
         ws.append([None, None])
-        ws.append(["farm", "qty"])
-        ws.append(["Foo Farms", 100])
+        ws.append(["customer", "qty"])
+        ws.append(["Acme Corp", 100])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -1015,13 +1015,13 @@ def test_header_row_indexing_matches_repl_view_with_leading_blanks(tmp_path):
               orientation: flat
               header_row: 1
             fields:
-              - { name: farm, source_column: "farm", type: string }
+              - { name: customer, source_column: "customer", type: string }
               - { name: qty, source_column: "qty", type: integer }
         """,
         tmp_path,
     )
 
-    assert result.canonical["rows"] == [{"farm": "Foo Farms", "qty": 100}]
+    assert result.canonical["rows"] == [{"customer": "Acme Corp", "qty": 100}]
 
 
 # ======================================================================
@@ -1031,16 +1031,15 @@ def test_header_row_indexing_matches_repl_view_with_leading_blanks(tmp_path):
 
 def test_duplicate_policy_ignore_suppresses_intentional_repeats(tmp_path):
     """When a workbook intentionally repeats the same record across tabs
-    (e.g. a rolling 6-week window where each week's tab carries the same
-    farm-house placement), ``duplicate_policy: ignore`` should suppress
-    ``duplicate_row`` errors.
+    (e.g. a multi-tab report where each tab carries the same record),
+    ``duplicate_policy: ignore`` should suppress ``duplicate_row`` errors.
     """
 
     def build(wb):
-        for tab in ("W1", "W2"):
+        for tab in ("Tab1", "Tab2"):
             ws = wb.create_sheet(tab)
-            ws.append(["farm", "house", "head"])
-            ws.append(["Foo Farms", "01", 1000])  # identical across both tabs
+            ws.append(["customer", "unit", "count"])
+            ws.append(["Acme Corp", "01", 1000])  # identical across both tabs
 
     xlsx = _xlsx(tmp_path, build)
     tmpl = _load(
@@ -1050,23 +1049,23 @@ def test_duplicate_policy_ignore_suppresses_intentional_repeats(tmp_path):
         version: 1
         description: P2-8 fixture - duplicate_policy ignore suppresses repeats
         entities:
-          - name: placement
+          - name: order
             cardinality: many
             locate:
-              tab_pattern: "^W\\\\d+$"
+              tab_pattern: "^Tab\\\\d+$"
               orientation: flat
               header_row: 0
               duplicate_policy: ignore
             fields:
-              - { name: farm, source_column: "farm", type: string }
-              - { name: house, source_column: "house", type: string }
-              - { name: head, source_column: "head", type: integer }
+              - { name: customer, source_column: "customer", type: string }
+              - { name: unit, source_column: "unit", type: string }
+              - { name: count, source_column: "count", type: integer }
         """,
     )
     result = extract(xlsx, tmpl)
     report = validate(result, tmpl)
     assert not any(e.type == "duplicate_row" for e in report.errors())
-    assert len(result.canonical["placements"]) == 2
+    assert len(result.canonical["orders"]) == 2
 
 
 # ======================================================================
@@ -1081,9 +1080,9 @@ def test_row_is_annotation_drops_single_cell_rows(tmp_path):
 
     def build(wb):
         ws = wb.create_sheet("Sheet1")
-        ws.append(["farm", "house", "head"])
+        ws.append(["customer", "unit", "count"])
         ws.append(["-- REVISED --", None, None])  # annotation banner
-        ws.append(["Foo Farms", "01", 1000])
+        ws.append(["Acme Corp", "01", 1000])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -1093,7 +1092,7 @@ def test_row_is_annotation_drops_single_cell_rows(tmp_path):
         version: 1
         description: P2-9 fixture - row_is_annotation_if drops banner rows
         entities:
-          - name: placement
+          - name: order
             cardinality: many
             locate:
               tab: Sheet1
@@ -1102,16 +1101,16 @@ def test_row_is_annotation_drops_single_cell_rows(tmp_path):
               row_is_annotation_if:
                 - only_columns_populated: 1
             fields:
-              - { name: farm, source_column: "farm", type: string }
-              - { name: house, source_column: "house", type: string }
-              - { name: head, source_column: "head", type: integer }
+              - { name: customer, source_column: "customer", type: string }
+              - { name: unit, source_column: "unit", type: string }
+              - { name: count, source_column: "count", type: integer }
         """,
         tmp_path,
     )
 
-    rows = result.canonical["placements"]
+    rows = result.canonical["orders"]
     assert len(rows) == 1
-    assert rows[0]["farm"] == "Foo Farms"
+    assert rows[0]["customer"] == "Acme Corp"
 
 
 # ======================================================================
@@ -1123,8 +1122,8 @@ def test_tab_only_binds_to_single_data_tab_regardless_of_name(tmp_path):
     def build(wb):
         # One tab, but its name varies per file. Operator named it the date.
         ws = wb.create_sheet("4-20-26")
-        ws.append(["farm", "head"])
-        ws.append(["Foo Farms", 1000])
+        ws.append(["customer", "count"])
+        ws.append(["Acme Corp", 1000])
 
     xlsx = _xlsx(tmp_path, build)
     result = _run(
@@ -1141,13 +1140,13 @@ def test_tab_only_binds_to_single_data_tab_regardless_of_name(tmp_path):
               orientation: flat
               header_row: 0
             fields:
-              - { name: farm, source_column: "farm", type: string }
-              - { name: head, source_column: "head", type: integer }
+              - { name: customer, source_column: "customer", type: string }
+              - { name: count, source_column: "count", type: integer }
         """,
         tmp_path,
     )
 
-    assert result.canonical["rows"][0]["farm"] == "Foo Farms"
+    assert result.canonical["rows"][0]["customer"] == "Acme Corp"
 
 
 # ======================================================================
@@ -1163,7 +1162,7 @@ def test_min_data_density_warns_when_most_rows_mostly_blank(tmp_path):
     def build(wb):
         ws = wb.create_sheet("Sheet1")
         ws.append(["a", "b", "c", "d"])
-        ws.append(["Foo Farms", 1, 2, 3])  # 4/4 populated
+        ws.append(["Acme Corp", 1, 2, 3])  # 4/4 populated
         ws.append([None, None, None, 10])  # 1/4
         ws.append([None, None, None, 20])  # 1/4
         ws.append([None, None, None, 30])  # 1/4
@@ -1293,10 +1292,10 @@ def test_inspect_headers_returns_normalized_header_to_index_map(tmp_path):
 
     def build(wb):
         ws = wb.create_sheet("Sheet1")
-        ws.append(["Farm  Name", "Total \nEggs", "Hatch \nDate"])
-        ws.append(["Foo Farms", 100, date(2026, 1, 15)])
+        ws.append(["Customer  Name", "Total \nItems", "Due \nDate"])
+        ws.append(["Acme Corp", 100, date(2026, 1, 15)])
 
     xlsx = _xlsx(tmp_path, build)
     headers = crease.inspect_headers(xlsx, tab="Sheet1", header_row=0)
     # After P0-4 lands too, expect collapsed whitespace.
-    assert headers == {"farm name": 0, "total eggs": 1, "hatch date": 2}
+    assert headers == {"customer name": 0, "total items": 1, "due date": 2}

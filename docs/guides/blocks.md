@@ -1,9 +1,9 @@
 # Repeating sections (`blocks:`)
 
 Some reports pack multiple sections into one tab — a weekly schedule
-with a separate sub-table per day, an invoice with a header row
-followed by line items repeated for each contract, a placement report
-that interleaves a per-group title row with the detail rows underneath.
+with a separate sub-table per period, an invoice with a header row
+followed by line items repeated for each contract, or a report that
+interleaves a per-group title row with the detail rows underneath.
 
 A flat `entities:` declaration can't say *"this entity repeats inside
 a tab, anchored by start and end patterns, and a piece of metadata
