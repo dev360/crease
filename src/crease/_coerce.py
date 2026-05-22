@@ -58,7 +58,21 @@ def resolve_null_tokens(field: FieldSpec, template: Template) -> list[str]:
     return DEFAULT_NULL_TOKENS
 
 
-def collapse_null(value: Any, null_tokens: list[str]) -> Any:
+def resolve_null_patterns(field: FieldSpec, template: Template) -> list[re.Pattern[str]]:
+    """Layered: field → template → empty. Compiled once per field."""
+    raw: list[str] = []
+    if field.null_patterns is not None:
+        raw = field.null_patterns
+    elif template.null_patterns is not None:
+        raw = template.null_patterns
+    return [re.compile(p) for p in raw]
+
+
+def collapse_null(
+    value: Any,
+    null_tokens: list[str],
+    null_patterns: list[re.Pattern[str]] | tuple[re.Pattern[str], ...] = (),
+) -> Any:
     if value is None:
         return None
     if isinstance(value, str):
@@ -67,6 +81,9 @@ def collapse_null(value: Any, null_tokens: list[str]) -> Any:
             return None
         for token in null_tokens:
             if trimmed.casefold() == token.casefold():
+                return None
+        for pat in null_patterns:
+            if pat.fullmatch(trimmed):
                 return None
     return value
 

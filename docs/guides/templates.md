@@ -155,6 +155,54 @@ If no `time_formats` are given, ISO-format strings (`"09:30:00"`,
 `"09:30"`) still parse. The canonical value is always the ISO string
 form of the time (mirroring how `date` / `datetime` fields project).
 
+## Regex null collapse
+
+When a worksheet uses *patterned* placeholders for missing values
+(``[Company]``, ``[Email]``, ``[Fax]``), enumerating each variant in
+``null_tokens`` is brittle. ``null_patterns`` accepts a list of full-match
+regexes layered the same way as ``null_tokens`` — field overrides
+template overrides nothing:
+
+```yaml
+null_patterns:
+  - "^\\[.+\\]$"           # any bracketed placeholder
+  - "^TBD\\s*\\d*$"        # TBD, TBD1, TBD-2, ...
+entities:
+  - name: row
+    locate: { tab: Sheet1, orientation: flat, header_row: 0 }
+    fields:
+      - { name: email, source_column: "email", type: email, nullable: true }
+```
+
+## Stopping mid-tab on a pattern
+
+``data_ends_at`` already supports an exact-string ``value_match``. When
+the sentinel row's text varies in trivial ways (double-space, trailing
+colon, capitalization), use ``value_pattern`` with a regex:
+
+```yaml
+data_ends_at:
+  type: value_pattern
+  column: 0
+  value_pattern: "^AVG AGE\\s+\\d+\\+\\s*:?\\s*$"
+```
+
+## Free-text banner rows
+
+Some reports carry occasional free-text "annotation" rows interleaved
+with data — `-- REVISED --`, dividers, notes in column A. Use
+``row_is_annotation_if`` with ``only_columns_populated: N`` to drop any
+row where N or fewer columns are populated, before field coercion runs:
+
+```yaml
+locate:
+  tab: Sheet1
+  orientation: flat
+  header_row: 0
+  row_is_annotation_if:
+    - only_columns_populated: 1
+```
+
 ## Templates that pin the read backend
 
 Crease reads spreadsheets through two interchangeable backends — calamine
