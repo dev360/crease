@@ -451,6 +451,7 @@ except crease.ValidationError as e:
 | `duplicate_row` | Row identical to a previous one |
 | `anchor_not_found` | Anchored field's label text not present in tab |
 | `header_duplicated` | `source_column` matches multiple header cells in the same row; bind picked the first. Set `source_column_index:` on the field to choose a specific occurrence (0-indexed across the matches). |
+| `header_above_nonblank` | The row immediately above `header_row` has non-blank text in a column that also has a header. Surfaces the case where the operator pointed at the bottom of a two-row header. The column geometry is in `ctx.columns`. |
 | `boolean_alias_unknown` | Value didn't match `true_values`/`false_values` |
 | `model_field_missing_in_canonical` | A Pydantic model passed to `to_pydantic` requires a field the template doesn't produce |
 | `model_type_mismatch` | A Pydantic model's field type doesn't match the canonical value's type |

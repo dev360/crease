@@ -256,11 +256,6 @@ def test_multi_row_header_combines_two_rows_into_semantic_name(tmp_path):
     assert [r["dry_or_liquid"] for r in result.canonical["rows"]] == ["LIQUID", "DRY"]
 
 
-@pytest.mark.xfail(
-    strict=True,
-    reason="P0-3 (interim): header_anchor_ambiguous warning not yet emitted "
-    "when header_row N has non-empty cells in row N-1 that would change semantics.",
-)
 def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
     """If ``header_row: 1`` and row 0 is non-empty with text that would change
     the semantic name (e.g. ``EST.`` above ``NUMBER``), surface a structured
@@ -280,6 +275,7 @@ def test_header_above_nonblank_emits_ambiguous_warning(tmp_path):
         """
         template_id: header_above_nonblank
         version: 1
+        description: P0-3 interim - warn when row above header_row has content
         entities:
           - name: row
             cardinality: many
