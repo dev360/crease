@@ -1,4 +1,7 @@
 
+## v1.3.0 (2026-05-22)
+
+
 ## v1.2.0 (2026-05-22)
 
 - docs(blocks): grammar guide, errors taxonomy, README bullet, nav entry ([`7126a3a`](https://github.com/dev360/crease/commit/7126a3abd5ad7bbe04c4c31e84981ff92f8ddb04))
